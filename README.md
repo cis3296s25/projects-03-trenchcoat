@@ -1,6 +1,5 @@
-# Project Name
-Put here a short paragraph describing your project. 
-Adding an screenshot or a mockup of your application in action would be nice.  
+# Trench Coat
+Trench Coat is an online game designed for multiple users on individual devices to play together through a client-server web application.
 
 ![This is a screenshot.](images.png)
 # How to run
