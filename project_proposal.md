@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/cd51fd84-74fe-4a52-9065-048a00acdae4)
+
 Aim to create a **client-server web application** where multiple users on individual 
 devices can simultaneously collaborate on responding to prompts, _similar to Jackbox Party Games_. 
 Will be developing using several web-based programming languages like **JavaScript**, 
@@ -6,6 +8,11 @@ as well as learning about new technologies such as **WebSocket** protocols to cr
 [Proof of concept](https://github.com/zantuaw09/party-game-concept)
 
 ## Project Abstract
+This is a proposed project for an online party game application where players are assigned a word or phrase. 
+The player is then required to draw out this word or sentence. Players can join a lobby on their personal computers
+or mobile devices, which can be created and managed by a lobby host. Once the game is started, a player is given a word 
+or a phrase, this player must draw out the assigned word or phrase and all of the other players in the game are supposed 
+to guess what the drawing is. Whoever guesses correctly first is awarded the points. This loops until all players have gone.
 
 ### High Level Requirement
 Upon opening the application, users will be able to either create a lobby or join a pre-existing one;
