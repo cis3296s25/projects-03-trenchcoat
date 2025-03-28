@@ -1,0 +1,1 @@
+FOR friends WHO need a multiplayer game. Trenchcoat is a web-based game THAT allows multiple players to join and play a game together. UNLIKE other games, OUR game is free, easy to use, and allows many players at once.
