@@ -1,4 +1,4 @@
-# Socket.IO Game Project
+# Trench Coat
 
 A simple multiplayer game application that uses Socket.IO for real-time communication between players.
 
