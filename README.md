@@ -1,5 +1,5 @@
 # Trench Coat
-Trench Coat is an online game designed for multiple users on individual devices to play together through a client-server web application.
+Trench Coat is an online game designed for multiple users on individual devices to play together through a client-server web application. This is a game where you will be given a word that you have to draw out and other players would have to guess the word based on what you have drawn.
 
 ![This is a screenshot.](images.png)
 # How to run
