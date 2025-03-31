@@ -10,7 +10,7 @@ function JoinGame() {
     const [joined, setJoined] = useState(false);
 
     useEffect(() => {
-        const socket = io('http://localhost:3001');
+        const socket = io('https://projects-03-trenchcoat.onrender.com');
         setSocket(socket);
 
         // Clean up on unmount
