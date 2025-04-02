@@ -6,7 +6,6 @@ function JoinGame() {
     const [username, setUsername] = useState('');
     const [isValid, setIsValid] = useState(null);
     const [socket, setSocket] = useState(null);
-    const [userList, setUserList] = useState([]);
     const [joined, setJoined] = useState(false);
 
     useEffect(() => {
@@ -31,11 +30,6 @@ function JoinGame() {
             if (result) {
                 setJoined(true);
             }
-        });
-
-        // Listen for updated user lists
-        socket.on('userList', (users) => {
-            setUserList(users);
         });
 
         return () => {
@@ -72,15 +66,7 @@ function JoinGame() {
                 </div>
             ) : (
                 <div>
-                    <h2>Game Lobby</h2>
-                    <h3>Connected Users:</h3>
-                    <ul>
-                        {userList.map(user => (
-                            <li key={user.id}>
-                                {user.username} {user.id === socket.id ? "(You)" : ""}
-                            </li>
-                        ))}
-                    </ul>
+                    <h1>connected!</h1>
                 </div>
             )}
         </div>
