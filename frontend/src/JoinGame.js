@@ -12,7 +12,7 @@ function JoinGame() {
         
         // for local testing use "http://localhost:3001"
         // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-        const socket = io("https://projects-03-trenchcoat.onrender.com");
+        const socket = io("http://localhost:3001");
         setSocket(socket);
 
         // Clean up on unmount
