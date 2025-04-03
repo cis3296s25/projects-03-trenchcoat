@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 
 function JoinGame() {
     const [code, setCode] = useState('');
@@ -8,13 +9,21 @@ function JoinGame() {
     const [socket, setSocket] = useState(null);
     const [userList, setUserList] = useState([]);
     const [joined, setJoined] = useState(false);
-
+    const navigate = useNavigate();
+    const handleGoBack = () => {
+        navigate(-1);
+    };
     useEffect(() => {
         
         // for local testing use "http://localhost:3001"
         // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-        const socket = io("https://projects-03-trenchcoat.onrender.com");
+        const socket = io("http://localhost:3001");
         setSocket(socket);
+
+        socket.on('gameStarted', () => {
+            console.log("Game started! Navigating all users...");
+            navigate('/game');
+        });
 
         // Clean up on unmount
         return () => {
@@ -33,7 +42,6 @@ function JoinGame() {
             }
         });
 
-        // Listen for updated user lists
         socket.on('userList', (users) => {
             setUserList(users);
         });
@@ -51,10 +59,29 @@ function JoinGame() {
         }
     };
 
+    const handleStartGame = () => {
+        if (socket) {
+            socket.emit('startGame');
+        }
+    };
+
+    useEffect(() => {
+        if (!socket) return;
+        socket.on('gameStarted', () => {
+            console.log("Game started!");
+            navigate('/game');
+        });
+    
+        return () => {
+            socket.off('gameStarted');
+        };
+    }, [socket]);
+
     return (
         <div>
             {!joined ? (
                 <div>
+                    <h1>My Game</h1>
                     <input
                         type="text"
                         value={username}
@@ -72,8 +99,9 @@ function JoinGame() {
                 </div>
             ) : (
                 <div>
-                    <h2>Game Lobby</h2>
-                    <h3>Connected Users:</h3>
+                    <h1>connected!</h1>
+                    <h1>Lobby</h1>
+                    <h2>Current Users:</h2>
                     <ul>
                         {userList.map(user => (
                             <li key={user.id}>
@@ -81,6 +109,7 @@ function JoinGame() {
                             </li>
                         ))}
                     </ul>
+                    <button onClick={handleStartGame}>Start Game</button>
                 </div>
             )}
         </div>
