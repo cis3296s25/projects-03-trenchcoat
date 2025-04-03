@@ -6,14 +6,13 @@ function JoinGame() {
     const [username, setUsername] = useState('');
     const [isValid, setIsValid] = useState(null);
     const [socket, setSocket] = useState(null);
-    const [userList, setUserList] = useState([]);
     const [joined, setJoined] = useState(false);
 
     useEffect(() => {
         
         // for local testing use "http://localhost:3001"
         // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-        const socket = io("https://projects-03-trenchcoat.onrender.com");
+        const socket = io("http://localhost:3001");
         setSocket(socket);
 
         // Clean up on unmount
@@ -31,11 +30,6 @@ function JoinGame() {
             if (result) {
                 setJoined(true);
             }
-        });
-
-        // Listen for updated user lists
-        socket.on('userList', (users) => {
-            setUserList(users);
         });
 
         return () => {
@@ -72,15 +66,7 @@ function JoinGame() {
                 </div>
             ) : (
                 <div>
-                    <h2>Game Lobby</h2>
-                    <h3>Connected Users:</h3>
-                    <ul>
-                        {userList.map(user => (
-                            <li key={user.id}>
-                                {user.username} {user.id === socket.id ? "(You)" : ""}
-                            </li>
-                        ))}
-                    </ul>
+                    <h1>connected!</h1>
                 </div>
             )}
         </div>
