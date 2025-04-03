@@ -28,9 +28,24 @@ let connectedUsers = []; // Array to store connected users
 io.on('connection', (socket) => {
     console.log('User connected with socket ID:', socket.id);
 
+    // Drawing events (shared canvas logic)
+    socket.on('startDrawing', (data) => {
+        io.emit('startDrawing', data); 
+    });
+    
+    socket.on('drawing', (data) => {
+        io.emit('drawing', data);
+    });
+    
+    socket.on('endDrawing', () => {
+        io.emit('endDrawing');
+    });
+    
+
     // Listen for verification requests
     socket.on('verifyGameCode', (clientCode, username) => {
         const isValid = clientCode === gameCode;
+
 
         if (isValid) {
             // Add user to room using the game code as the room name
