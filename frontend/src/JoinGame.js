@@ -1,32 +1,14 @@
 import { useState, useEffect } from 'react';
-import ChatBox from "./components/ChatBox";
-import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
+import ChatBox from './components/ChatBox';
 
-function JoinGame() {
+function JoinGame({ socket }) {
   const [code, setCode] = useState('');
   const [username, setUsername] = useState('');
   const [isValid, setIsValid] = useState(null);
-  const [socket, setSocket] = useState(null);
   const [userList, setUserList] = useState([]);
   const [joined, setJoined] = useState(false);
   const navigate = useNavigate();
-
-  const handleGoBack = () => {
-    navigate(-1);
-  };
-
-  useEffect(() => {
-    // for local testing use "http://localhost:3001"
-    // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-    const socket = io("http://localhost:3001");
-    setSocket(socket);
-
-    // Clean up on unmount
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -72,7 +54,7 @@ function JoinGame() {
     <div>
       {!joined ? (
         <div>
-          <h1>My Game</h1>
+          <h1>Join Game</h1>
           <input
             type="text"
             value={username}
@@ -90,7 +72,6 @@ function JoinGame() {
         </div>
       ) : (
         <div>
-          <h1>connected!</h1>
           <h1>Lobby</h1>
           <h2>Current Users:</h2>
           <ul>

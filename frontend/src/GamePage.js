@@ -1,16 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import DrawingCanvas from './DrawingCanvas';
 
-function GamePage() {
+function GamePage({ socket }) {
   const navigate = useNavigate();
   const handleGoBack = () => {
     navigate('/');
   };
+
   return (
     <div>
       <h1>Game Page</h1>
-      <p>This will be the drawing place for now</p>
-      <button onClick={handleGoBack}>Go Back</button>
+      {socket ? (
+        <DrawingCanvas socket={socket} />
+      ) : (
+        <p>Connecting to server...</p>
+      )}
+      <button onClick={handleGoBack}>Back to Lobby</button>
     </div>
   );
 }
