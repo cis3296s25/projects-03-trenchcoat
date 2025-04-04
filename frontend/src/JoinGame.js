@@ -1,47 +1,52 @@
-import { useState, useEffect } from "react";
-import ChatBox from "./components/ChatBox";
-import { io } from "socket.io-client";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ChatBox from './components/ChatBox';
 
-function JoinGame() {
-  const [code, setCode] = useState("");
-  const [username, setUsername] = useState("");
+function JoinGame({ socket }) {
+  const [code, setCode] = useState('');
+  const [username, setUsername] = useState('');
   const [isValid, setIsValid] = useState(null);
-  const [socket, setSocket] = useState(null);
+  const [userList, setUserList] = useState([]);
   const [joined, setJoined] = useState(false);
-
-  useEffect(() => {
-    // for local testing use "http://localhost:3001"
-    // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-    const socket = io("http://localhost:3001");
-    setSocket(socket);
-
-    // Clean up on unmount
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!socket) return;
 
     // Listen for verification results
-    socket.on("verificationResult", (result) => {
+    socket.on('verificationResult', (result) => {
       setIsValid(result);
       if (result) {
         setJoined(true);
       }
     });
 
+    socket.on('userList', (users) => {
+      setUserList(users);
+    });
+
+    socket.on('gameStarted', () => {
+      console.log("Game started! Navigating all users...");
+      navigate('/game');
+    });
+
     return () => {
-      socket.off("verificationResult");
-      socket.off("userList");
+      socket.off('verificationResult');
+      socket.off('userList');
+      socket.off('gameStarted');
     };
-  }, [socket]);
+  }, [socket, navigate]);
 
   // Function to verify the code
   const verifyGameCode = () => {
     if (socket) {
-      socket.emit("verifyGameCode", code, username);
+      socket.emit('verifyGameCode', code, username);
+    }
+  };
+
+  const handleStartGame = () => {
+    if (socket) {
+      socket.emit('startGame');
     }
   };
 
@@ -49,6 +54,7 @@ function JoinGame() {
     <div>
       {!joined ? (
         <div>
+          <h1>Join Game</h1>
           <input
             type="text"
             value={username}
@@ -66,7 +72,16 @@ function JoinGame() {
         </div>
       ) : (
         <div>
-          <h1>connected!</h1>
+          <h1>Lobby</h1>
+          <h2>Current Users:</h2>
+          <ul>
+            {userList.map(user => (
+              <li key={user.id}>
+                {user.username} {user.id === socket.id ? "(You)" : ""}
+              </li>
+            ))}
+          </ul>
+          <button onClick={handleStartGame}>Start Game</button>
           <ChatBox
             userName={username}
             code={code}
