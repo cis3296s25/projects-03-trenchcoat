@@ -7,7 +7,7 @@ const { Server } = require("socket.io");
 const io = new Server(server, {
   cors: {
     origin: [
-      "https://projects-03-trenchcoat.onrender.com",
+      // "https://projects-03-trenchcoat.onrender.com",
       "http://localhost:3000",
     ],
     methods: ["GET", "POST"],
@@ -48,14 +48,27 @@ io.on("connection", (socket) => {
     io.to(gameCode).emit("drawing", data);
   });
 
-  socket.on("endDrawing", () => {
-    io.to(gameCode).emit("endDrawing");
-  });
-
-  // Handle game start
-  socket.on("startGame", () => {
-    io.to(gameCode).emit("gameStarted");
-  });
+    socket.on('endDrawing', () => {
+        io.to(gameCode).emit('endDrawing');
+    });
+    
+    socket.on('strokeDone', (stroke) => {
+        socket.broadcast.emit('strokeDone', stroke);
+    });
+    
+    socket.on('undoLastStroke', () => {
+        socket.broadcast.emit('undoLastStroke');
+        socket.emit('undoLastStroke');
+    });
+    
+    socket.on('clearCanvas', () => {
+        socket.broadcast.emit('clearCanvas');
+        socket.emit('clearCanvas');
+    });
+      // Handle game start
+    socket.on("startGame", () => {
+      io.to(gameCode).emit("gameStarted");
+    });
 
   socket.on("chatMessageSend", ({ message, gameCode, userName }) => {
     // Check if the room exists, if not create it
