@@ -35,13 +35,6 @@ export default function ChatBox(props) {
     if (!socket) return;
 
     const handler = (gameCodeFromServer, history) => {
-      console.log(
-        gameCodeFromServer,
-        "gameCodeFromServer",
-        history,
-        "history",
-        code
-      );
       if (code === gameCodeFromServer) {
         setChatHistory(history);
       }
