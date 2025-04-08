@@ -5,7 +5,7 @@ const styles = {
     borderRadius: "5px",
     padding: "1rem",
     backgroundColor: "#f9f9f9",
-    width: "30%",
+    width: "20%",
     position: "absolute",
     right: 0,
     top: 0,
@@ -23,16 +23,25 @@ const styles = {
 };
 
 export default function ChatBox(props) {
-  const { code, isValid, socket, userName } = props;
+  const { appState, setAppState } = props;
+  const { code, isValid, socket, userName } = appState;
+
+  const [joinedChat, setJoinedChat] = React.useState(false);
 
   const [chatHistory, setChatHistory] = React.useState(null);
-  const [userJoined, setUserJoined] = React.useState(false);
 
   // Fetch chat history when the component mounts
   React.useEffect(() => {
     if (!socket) return;
 
     const handler = (gameCodeFromServer, history) => {
+      console.log(
+        gameCodeFromServer,
+        "gameCodeFromServer",
+        history,
+        "history",
+        code
+      );
       if (code === gameCodeFromServer) {
         setChatHistory(history);
       }
@@ -41,15 +50,20 @@ export default function ChatBox(props) {
     socket.on("chatHistory", handler);
 
     return () => {
+      socket.emit("chatMessageSend", {
+        message: "left the game",
+        gameCode: code,
+        userName,
+      });
       socket.off("chatHistory", handler);
     };
-  }, [socket, code]);
+  }, [socket, code, userName]);
 
-  // Join the game and send a message to the chat
+  // When user joins game, send a message to the server/chatbox
   React.useEffect(() => {
     if (isValid && socket) {
-      if (!userJoined) {
-        setUserJoined(true);
+      if (!joinedChat) {
+        setJoinedChat(true);
         socket.emit("chatMessageSend", {
           message: "joined the game",
           gameCode: code,
@@ -57,7 +71,15 @@ export default function ChatBox(props) {
         });
       }
     }
-  }, [isValid, socket, userJoined, code, userName]);
+  }, [
+    isValid,
+    socket,
+    joinedChat,
+    code,
+    userName,
+    setJoinedChat,
+    setChatHistory,
+  ]);
 
   function onChatboxChange(e) {
     const message = e.target.value;

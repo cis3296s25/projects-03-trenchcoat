@@ -1,12 +1,15 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import DrawingCanvas from './DrawingCanvas';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import DrawingCanvas from "./DrawingCanvas";
+import ChatBox from "./components/ChatBox";
 
-function GamePage({ socket }) {
+function GamePage({ appState, setAppState }) {
   const navigate = useNavigate();
   const handleGoBack = () => {
-    navigate('/');
+    navigate("/");
   };
+
+  const { userName, code, isValid, userList, socket } = appState;
 
   return (
     <div>
@@ -17,6 +20,8 @@ function GamePage({ socket }) {
         <p>Connecting to server...</p>
       )}
       <button onClick={handleGoBack}>Back to Lobby</button>
+
+      <ChatBox appState={appState} setAppState={setAppState} />
     </div>
   );
 }
