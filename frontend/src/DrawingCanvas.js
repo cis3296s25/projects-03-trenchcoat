@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 function DrawingCanvas({ socket }) {
     const canvasRef = useRef(null);
@@ -6,7 +7,9 @@ function DrawingCanvas({ socket }) {
 
     const [brushColor, setBrushColor] = useState('#000000');
     const [brushSize, setBrushSize] = useState(2);
-
+    const [paths, setPaths] = useState([]); // Store local paths for undo
+    const currentPath = useRef([]); // Temporary store for active drawing stroke
+    
     useEffect(() => {
         if (!socket) return;
 
@@ -23,10 +26,17 @@ function DrawingCanvas({ socket }) {
         const startDrawing = (e) => {
             isDrawing.current = true;
             const { x, y } = getPos(e);
+            const strokeId = uuidv4();
+            currentPath.current = [{ x, y, color: brushColor, size: brushSize, id: strokeId }];
             socket.emit('startDrawing', { x, y });
         };
-
+        
         const endDrawing = () => {
+            if (isDrawing.current && currentPath.current.length > 0) {
+                const stroke = [...currentPath.current];
+                setPaths((prev) => [...prev, stroke]);
+                socket.emit('strokeDone', stroke); 
+            }
             isDrawing.current = false;
             socket.emit('endDrawing');
         };
@@ -34,13 +44,9 @@ function DrawingCanvas({ socket }) {
         const draw = (e) => {
             if (!isDrawing.current) return;
             const { x, y } = getPos(e);
-
-            socket.emit('drawing', {
-                x,
-                y,
-                color: brushColor,
-                size: brushSize
-            });
+            const point = { x, y, color: brushColor, size: brushSize };
+            currentPath.current.push(point);
+            socket.emit('drawing', point);
         };
 
         canvas.addEventListener('mousedown', startDrawing);
@@ -79,13 +85,67 @@ function DrawingCanvas({ socket }) {
             ctx.beginPath();
         });
 
+        socket.on('strokeDone', (stroke) => {
+            setPaths((prev) => {
+                const newPaths = [...prev, stroke];
+                redrawAll(newPaths);
+                return newPaths;
+            });
+        });
+        
+        socket.on('undoLastStroke', () => {
+            setPaths((prev) => {
+                const updatedPaths = prev.slice(0, -1);
+                redrawAll(updatedPaths);
+                return updatedPaths;
+            });
+        });
+
+        socket.on('clearCanvas', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            setPaths([]);
+        });
+
+
         return () => {
             socket.off('startDrawing');
             socket.off('drawing');
             socket.off('endDrawing');
+            socket.off('strokeDone');
+            socket.off('undoLastStroke');
+            socket.off('clearCanvas');
         };
     }, [socket]);
 
+    const redrawAll = (strokePaths) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        strokePaths.forEach(path => {
+            ctx.beginPath();
+            for (let i = 0; i < path.length; i++) {
+                const { x, y, color, size } = path[i];
+                ctx.lineWidth = size;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = color;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        });
+
+        ctx.beginPath();
+    };
+
+    const handleUndo = () => {
+        socket.emit('undoLastStroke');
+    };
+
+    const handleClear = () => {
+        socket.emit('clearCanvas');
+    };
+    
     return (
         <div style={{
             display: 'flex',
@@ -115,6 +175,10 @@ function DrawingCanvas({ socket }) {
                     />
                     <span style={{ marginLeft: '0.5rem' }}>{brushSize}px</span>
                 </label>
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+                <button onClick={handleUndo} style={{ marginRight: '1rem' }}>Undo</button>
+                <button onClick={handleClear}>Clear</button>
             </div>
             <canvas
                 ref={canvasRef}
