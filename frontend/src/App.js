@@ -1,24 +1,35 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Route, Routes } from 'react-router-dom';
 import JoinGame from './JoinGame';
 import GamePage from './GamePage';
-import Lobby from './Lobby';
+import { io } from 'socket.io-client';
 
 function App() {
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    // for local testing use "http://localhost:3001"
+    // for testing on render use "https://projects-03-trenchcoat.onrender.com"
+    const newSocket = io("http://localhost:3001");
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
   return (
-    <Router>
-      <div className="App">
-        <header className="App-header">
-        </header>
-        <main>
-          <Routes>
-            <Route path="/" element={<JoinGame />} />
-            <Route path="/lobby" element={<Lobby />} />
-            <Route path="/game" element={<GamePage />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <div className="App">
+      <header className="App-header">
+        <h1>My Game</h1>
+      </header>
+      <main>
+        <Routes>
+          <Route path="/" element={<JoinGame socket={socket} />} />
+          <Route path="/game" element={<GamePage socket={socket} />} />
+        </Routes>
+      </main>
+    </div>
   );
 }
 
