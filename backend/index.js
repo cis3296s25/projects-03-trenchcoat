@@ -5,139 +5,140 @@ const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
-    cors: {
-        origin: [
-            "https://projects-03-trenchcoat.onrender.com",
-            "http://localhost:3000",
-        ],
-        methods: ["GET", "POST"],
-        credentials: true,
-    },
+  cors: {
+    origin: [
+      "https://projects-03-trenchcoat.onrender.com",
+      "http://localhost:3000",
+    ],
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 function generateRandomCode(length) {
-    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let result = "";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
 
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        result += characters[randomIndex];
-    }
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    result += characters[randomIndex];
+  }
 
-    return result;
+  return result;
 }
 
-let gameCode = generateRandomCode(5);
+// let gameCode = generateRandomCode(5);
+let gameCode = "1";
 let connectedUsers = []; // Array to store connected users
 let hostSocketId = null; // Track the host's socket ID
 const chatRooms = {};
 
 io.on("connection", (socket) => {
-    console.log("User connected with socket ID:", socket.id);
+  console.log("User connected with socket ID:", socket.id);
 
-    // emits game code
-    socket.emit("lobbyCreated", gameCode);
+  // emits game code
+  socket.emit("lobbyCreated", gameCode);
 
-    // Drawing events (shared canvas logic)
-    socket.on('startDrawing', (data) => {
-        io.to(gameCode).emit('startDrawing', data);
-    });
+  // Drawing events (shared canvas logic)
+  socket.on("startDrawing", (data) => {
+    io.to(gameCode).emit("startDrawing", data);
+  });
 
-    socket.on('drawing', (data) => {
-        io.to(gameCode).emit('drawing', data);
-    });
+  socket.on("drawing", (data) => {
+    io.to(gameCode).emit("drawing", data);
+  });
 
-    socket.on('endDrawing', () => {
-        io.to(gameCode).emit('endDrawing');
-    });
+  socket.on("endDrawing", () => {
+    io.to(gameCode).emit("endDrawing");
+  });
 
-    // Handle game start
-    socket.on('startGame', () => {
-        io.to(gameCode).emit('gameStarted');
-    });
+  // Handle game start
+  socket.on("startGame", () => {
+    io.to(gameCode).emit("gameStarted");
+  });
 
-    socket.on("chatMessageSend", ({ message, gameCode, userName }) => {
-        // Check if the room exists, if not create it
-        chatRooms[gameCode] = chatRooms[gameCode] || [];
+  socket.on("chatMessageSend", ({ message, gameCode, userName }) => {
+    // Check if the room exists, if not create it
+    chatRooms[gameCode] = chatRooms[gameCode] || [];
 
-        // Add the message to the room's chat history
-        chatRooms[gameCode].push({ userName, message, timestamp: new Date() });
+    // Add the message to the room's chat history
+    chatRooms[gameCode].push({ userName, message, timestamp: new Date() });
 
-        io.to(gameCode).emit("chatHistory", gameCode, chatRooms[gameCode]);
-    });
+    io.to(gameCode).emit("chatHistory", gameCode, chatRooms[gameCode]);
+  });
 
-    // Listen for verification requests
-    socket.on("verifyGameCode", (clientCode, username) => {
-        const isValid = clientCode === gameCode;
+  // Listen for verification requests
+  socket.on("verifyGameCode", (clientCode, username) => {
+    const isValid = clientCode === gameCode;
 
-        if (isValid) {
-            // Handle host connections
-            if (username === "Host") {
-                // If there's already a host and it's not this socket
-                if (hostSocketId && hostSocketId !== socket.id) {
-                    console.log("Rejecting duplicate host connection attempt");
-                    socket.emit("verificationResult", false);
-                    return;
-                }
-
-                // Set this socket as the host
-                hostSocketId = socket.id;
-                console.log("Host connected with ID:", socket.id);
-            }
-
-            // Add user to room using the game code as the room name
-            socket.join(gameCode);
-
-            // Check if user already exists (from a refresh)
-            const existingUserIndex = connectedUsers.findIndex(
-                (user) => user.username === username
-            );
-            if (existingUserIndex !== -1) {
-                // Replace the existing user's socket ID
-                connectedUsers[existingUserIndex].id = socket.id;
-            } else {
-                // Add new user
-                connectedUsers.push({
-                    id: socket.id,
-                    username: username || `User-${socket.id.substr(0, 4)}`,
-                });
-            }
-
-            // Emit updated user list to everyone in the room
-            io.to(gameCode).emit("userList", connectedUsers);
+    if (isValid) {
+      // Handle host connections
+      if (username === "Host") {
+        // If there's already a host and it's not this socket
+        if (hostSocketId && hostSocketId !== socket.id) {
+          console.log("Rejecting duplicate host connection attempt");
+          socket.emit("verificationResult", false);
+          return;
         }
 
-        // Send verification result back to the client
-        socket.emit("verificationResult", isValid);
-    });
+        // Set this socket as the host
+        hostSocketId = socket.id;
+        console.log("Host connected with ID:", socket.id);
+      }
 
-    // Handle disconnections
-    socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
+      // Add user to room using the game code as the room name
+      socket.join(gameCode);
 
-        // Check if the host disconnected
-        if (socket.id === hostSocketId) {
-            hostSocketId = null;
-            console.log("Host disconnected");
-        }
+      // Check if user already exists (from a refresh)
+      const existingUserIndex = connectedUsers.findIndex(
+        (user) => user.username === username
+      );
+      if (existingUserIndex !== -1) {
+        // Replace the existing user's socket ID
+        connectedUsers[existingUserIndex].id = socket.id;
+      } else {
+        // Add new user
+        connectedUsers.push({
+          id: socket.id,
+          username: username || `User-${socket.id.substr(0, 4)}`,
+        });
+      }
 
-        // Remove user from our tracked list
-        connectedUsers = connectedUsers.filter((user) => user.id !== socket.id);
+      // Emit updated user list to everyone in the room
+      io.to(gameCode).emit("userList", connectedUsers);
+    }
 
-        // Update all remaining clients
-        io.to(gameCode).emit("userList", connectedUsers);
-    });
+    // Send verification result back to the client
+    socket.emit("verificationResult", isValid);
+  });
+
+  // Handle disconnections
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+
+    // Check if the host disconnected
+    if (socket.id === hostSocketId) {
+      hostSocketId = null;
+      console.log("Host disconnected");
+    }
+
+    // Remove user from our tracked list
+    connectedUsers = connectedUsers.filter((user) => user.id !== socket.id);
+
+    // Update all remaining clients
+    io.to(gameCode).emit("userList", connectedUsers);
+  });
 });
 
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
-    res.sendFile("host.html", { root: path.join(__dirname, "public") });
+  res.sendFile("host.html", { root: path.join(__dirname, "public") });
 });
 
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-    console.log(`listening on *:${PORT}`);
-    console.log("Game code:", gameCode);
+  console.log(`listening on *:${PORT}`);
+  console.log("Game code:", gameCode);
 });
