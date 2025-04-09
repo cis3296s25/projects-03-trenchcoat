@@ -4,6 +4,7 @@ const app = express();
 const http = require("http");
 const server = http.createServer(app);
 const { Server } = require("socket.io");
+const randomWords = require("word-pictionary-list");
 const io = new Server(server, {
   cors: {
     origin: [
@@ -27,32 +28,126 @@ function generateRandomCode(length) {
   return result;
 }
 
-// let gameCode = generateRandomCode(5);
-let gameCode = "1";
 let connectedUsers = []; // Array to store connected users
-let hostSocketId = null; // Track the host's socket ID
-const chatRooms = {};
+
+const rooms = {};
 
 io.on("connection", (socket) => {
   console.log("User connected with socket ID:", socket.id);
 
-  // emits game code
-  socket.emit("lobbyCreated", gameCode);
+  // raw dawg
+  socket.on("createRoom", (data) => {
+    console.log("Creating game with data:", data);
+    const roomCode = generateRandomCode(5);
+    const { userName } = data;
+    socket.join(roomCode); // Join the room with the generated game code
+
+    const user = {
+      id: socket.id,
+      userName,
+    };
+
+    const room = {
+      code: roomCode,
+      host: user,
+      users: [user],
+      randomWord: randomWords(1)[0],
+      chatHistory: [],
+      gameStarted: false,
+    };
+
+    rooms[roomCode] = room;
+
+    io.to(roomCode).emit("roomDataUpdated", roomCode, rooms[roomCode]);
+    console.log("Room created:", roomCode, rooms[roomCode]);
+  });
+
+  socket.on("updateRoomData", (roomCode, roomData) => {
+    const room = rooms[roomCode];
+
+    // Check if the room exists
+    if (!room || !roomData) {
+      console.log("Room not found or invalid data:", roomCode, roomData);
+      return;
+    }
+
+    const user = room.users.find((u) => u.id === socket.id);
+
+    if (!user) {
+      console.log("User not found in room:", socket.id, roomCode);
+      return;
+    }
+
+    const userIsHost = user.id === room.host.id;
+
+    rooms[roomCode] = roomData;
+    io.to(roomCode).emit("roomDataUpdated", roomCode, rooms[roomCode]);
+  });
+
+  socket.on("joinRoom", ({ inputCode, userName }) => {
+    console.log("Joining room:", inputCode, userName);
+
+    if (rooms[inputCode]) {
+      socket.join(inputCode);
+
+      const user = {
+        id: socket.id,
+        userName,
+      };
+
+      rooms[inputCode].users.push(user);
+      io.to(inputCode).emit("roomDataUpdated", inputCode, rooms[inputCode]);
+    } else {
+      console.log("Room not found:", inputCode);
+    }
+  });
+
+  socket.on("leaveRoom", ({ inputCode }) => {
+    const room = rooms[inputCode];
+    const user = room ? room?.users?.find((u) => u?.id === socket?.id) : null;
+    const userIsHost = user ? user.id === room?.host?.id : false;
+
+    if (room && user) {
+      rooms[inputCode].users = room?.users?.filter((u) => u.id !== user.id);
+
+      rooms[inputCode].chatHistory.push({
+        user,
+        message: `left the game.`,
+        timestamp: new Date(),
+      });
+
+      console.log("Chat history after leaving:", rooms[inputCode].chatHistory);
+
+      io.to(inputCode).emit("roomDataUpdated", inputCode, rooms[inputCode]);
+      // Emit to the user who left
+      io.to(socket.id).emit("roomDataUpdated", inputCode, null);
+    }
+
+    // If the user is the host, delete the room
+    if (userIsHost) {
+      console.log("Host left, deleting room:", inputCode);
+      delete rooms[inputCode];
+      io.to(inputCode).emit("roomDataUpdated", inputCode, null);
+    }
+
+    socket.leave(inputCode);
+  });
 
   // Drawing events (shared canvas logic)
-  socket.on("startDrawing", (data) => {
-    io.to(gameCode).emit("startDrawing", data);
+  socket.on("startDrawing", (code, data) => {
+    io.to(code).emit("startDrawing", data);
   });
 
-  socket.on("drawing", (data) => {
-    io.to(gameCode).emit("drawing", data);
+  socket.on("drawing", (code, data) => {
+    io.to(code).emit("drawing", data);
   });
 
-  socket.on("endDrawing", () => {
-    io.to(gameCode).emit("endDrawing");
+  socket.on("endDrawing", (code) => {
+    io.to(code).emit("endDrawing");
   });
 
-  socket.on("strokeDone", (stroke) => {
+  socket.on("strokeDone", (code, stroke) => {
+    io.to(code).emit("strokeDone", stroke);
     socket.broadcast.emit("strokeDone", stroke);
   });
 
@@ -66,81 +161,27 @@ io.on("connection", (socket) => {
     socket.emit("clearCanvas");
   });
 
-  // Handle game start
-  socket.on("startGame", () => {
-    io.to(gameCode).emit("gameStarted");
-  });
-
   socket.on("chatMessageSend", ({ message, gameCode, userName }) => {
-    // Check if the room exists, if not create it
-    chatRooms[gameCode] = chatRooms[gameCode] || [];
+    const room = rooms[gameCode];
 
-    // Add the message to the room's chat history
-    chatRooms[gameCode].push({ userName, message, timestamp: new Date() });
-
-    io.to(gameCode).emit("chatHistory", gameCode, chatRooms[gameCode]);
-  });
-
-  // Listen for verification requests
-  socket.on("verifyGameCode", (clientCode, username) => {
-    const isValid = clientCode === gameCode;
-
-    if (isValid) {
-      // Handle host connections
-      if (username === "Host") {
-        // If there's already a host and it's not this socket
-        if (hostSocketId && hostSocketId !== socket.id) {
-          console.log("Rejecting duplicate host connection attempt");
-          socket.emit("verificationResult", false);
-          return;
-        }
-
-        // Set this socket as the host
-        hostSocketId = socket.id;
-        console.log("Host connected with ID:", socket.id);
-      }
-
-      // Add user to room using the game code as the room name
-      socket.join(gameCode);
-
-      // Check if user already exists (from a refresh)
-      const existingUserIndex = connectedUsers.findIndex(
-        (user) => user.username === username
-      );
-      if (existingUserIndex !== -1) {
-        // Replace the existing user's socket ID
-        connectedUsers[existingUserIndex].id = socket.id;
-      } else {
-        // Add new user
-        connectedUsers.push({
-          id: socket.id,
-          username: username || `User-${socket.id.substr(0, 4)}`,
-        });
-      }
-
-      // Emit updated user list to everyone in the room
-      io.to(gameCode).emit("userList", connectedUsers);
+    if (!room?.chatHistory) {
+      console.log("Room not found:", gameCode);
+      return;
     }
 
-    // Send verification result back to the client
-    socket.emit("verificationResult", isValid);
-  });
+    const user = {
+      id: socket.id,
+      userName,
+    };
 
-  // Handle disconnections
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    room.chatHistory.push({
+      user,
+      message,
+      timestamp: new Date(),
+    });
 
-    // Check if the host disconnected
-    if (socket.id === hostSocketId) {
-      hostSocketId = null;
-      console.log("Host disconnected");
-    }
-
-    // Remove user from our tracked list
-    connectedUsers = connectedUsers.filter((user) => user.id !== socket.id);
-
-    // Update all remaining clients
-    io.to(gameCode).emit("userList", connectedUsers);
+    io.to(gameCode).emit("roomDataUpdated", gameCode, room);
+    console.log("Chat message sent:", message, gameCode, userName);
   });
 });
 
@@ -154,5 +195,4 @@ const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
   console.log(`listening on *:${PORT}`);
-  console.log("Game code:", gameCode);
 });
