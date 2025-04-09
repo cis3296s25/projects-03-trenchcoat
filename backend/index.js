@@ -52,6 +52,20 @@ io.on("connection", (socket) => {
     io.to(gameCode).emit("endDrawing");
   });
 
+  socket.on("strokeDone", (stroke) => {
+    socket.broadcast.emit("strokeDone", stroke);
+  });
+
+  socket.on("undoLastStroke", () => {
+    socket.broadcast.emit("undoLastStroke");
+    socket.emit("undoLastStroke");
+  });
+
+  socket.on("clearCanvas", () => {
+    socket.broadcast.emit("clearCanvas");
+    socket.emit("clearCanvas");
+  });
+
   // Handle game start
   socket.on("startGame", () => {
     io.to(gameCode).emit("gameStarted");
