@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import DrawingCanvas from "../DrawingCanvas";
+import DrawingCanvas from "../components/DrawingCanvas";
 import ChatBox from "../components/ChatBox";
 
 function Game({ appState, setAppState }) {
