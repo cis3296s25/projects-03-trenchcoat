@@ -5,7 +5,7 @@ const styles = {
     borderRadius: "5px",
     padding: "1rem",
     backgroundColor: "#f9f9f9",
-    width: "30%",
+    width: "20%",
     position: "absolute",
     right: 0,
     top: 0,
@@ -23,41 +23,36 @@ const styles = {
 };
 
 export default function ChatBox(props) {
-  const { code, isValid, socket, userName } = props;
+  const { appState, setAppState } = props;
+  const { socket, userName } = appState;
 
-  const [chatHistory, setChatHistory] = React.useState(null);
-  const [userJoined, setUserJoined] = React.useState(false);
+  const [joinedChat, setJoinedChat] = React.useState(false);
 
-  // Fetch chat history when the component mounts
   React.useEffect(() => {
-    if (!socket) return;
-
-    const handler = (gameCodeFromServer, history) => {
-      if (code === gameCodeFromServer) {
-        setChatHistory(history);
+    if (appState?.roomData?.randomWord && appState?.roomData?.chatHistory) {
+      const correctGuess = appState.roomData.chatHistory
+        .reverse()[0]
+        ?.message.toLowerCase()
+        .includes(appState.roomData.randomWord.toLowerCase());
+      if (correctGuess) {
+        alert("Correct guess!");
       }
-    };
+    }
+  }, [appState.roomData?.randomWord, appState.roomData?.chatHistory]);
 
-    socket.on("chatHistory", handler);
-
-    return () => {
-      socket.off("chatHistory", handler);
-    };
-  }, [socket, code]);
-
-  // Join the game and send a message to the chat
+  // When user joins game, send a message to the server/chatbox
   React.useEffect(() => {
-    if (isValid && socket) {
-      if (!userJoined) {
-        setUserJoined(true);
+    if (socket && appState?.roomData) {
+      if (!joinedChat) {
+        setJoinedChat(true);
         socket.emit("chatMessageSend", {
           message: "joined the game",
-          gameCode: code,
+          gameCode: appState?.roomData?.code,
           userName,
         });
       }
     }
-  }, [isValid, socket, userJoined, code, userName]);
+  }, [socket, appState?.roomData, joinedChat, userName]);
 
   function onChatboxChange(e) {
     const message = e.target.value;
@@ -66,11 +61,11 @@ export default function ChatBox(props) {
     if (message.includes("\n")) {
       e.target.value = ""; // Clear the textarea after sending
 
-      if (socket && isValid) {
+      if (socket) {
         console.log("sending...");
         socket.emit("chatMessageSend", {
           message: message.replace("\n", ""),
-          gameCode: code,
+          gameCode: appState?.roomData?.code,
           userName,
         });
       }
@@ -79,10 +74,10 @@ export default function ChatBox(props) {
 
   return (
     <div style={styles.container}>
-      {chatHistory &&
-        chatHistory.map((chat, index) => (
+      {appState?.roomData?.chatHistory &&
+        appState?.roomData?.chatHistory.map((chat, index) => (
           <div key={index}>
-            <strong>{chat.userName}</strong>: {chat.message}
+            <strong>{chat.user.userName}</strong>: {chat.message}
           </div>
         ))}
       <textarea onChange={onChatboxChange} style={styles.textarea}></textarea>
