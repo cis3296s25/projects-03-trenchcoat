@@ -185,12 +185,6 @@ io.on("connection", (socket) => {
   });
 });
 
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/", (req, res) => {
-  res.sendFile("host.html", { root: path.join(__dirname, "public") });
-});
-
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
