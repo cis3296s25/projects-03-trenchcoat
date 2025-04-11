@@ -37,6 +37,8 @@ function addUserToRoom(roomCode, user) {
         return null;
     }
 
+    user.socketId = user.id;
+
     rooms[roomCode].users.push(user);
     return rooms[roomCode];
 }
