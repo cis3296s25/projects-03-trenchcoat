@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ChatBox from "../components/ChatBox";
+// import Kicking from "../components/Kicking";
+
 const Lobby = ({ appState, setAppState }) => {
   const navigate = useNavigate();
-  const { userName, socket, roomData } = appState;
+  const { socket, roomData } = appState;
   const { roomCode } = useParams();
 
   // Check if the user is the host of the room
@@ -32,6 +35,17 @@ const Lobby = ({ appState, setAppState }) => {
     }
   }, [roomData, navigate, roomCode]);
 
+  useEffect(() => {
+    const handleKick = () => {
+      navigate("/");
+      window.location.reload();
+    };  
+    socket.on("youWereKicked", handleKick);
+    return () => {
+      socket.off("youWereKicked", handleKick);
+    };
+  }, [navigate, socket]);
+ 
   // Function to handle the leave game button click
   const handleLeaveGame = () => {
     if (socket) {
@@ -39,14 +53,50 @@ const Lobby = ({ appState, setAppState }) => {
     }
   };
 
+  const handleKickPlayer = async (user) => {
+    if (window.confirm(`Kick ${user.userName}?`)) {
+      console.log("Attempting to kick", user);
+      socket.emit("kickPlayer", {
+        roomCode,
+        targetSocketId: user.socketId
+      }, (response) => {
+        if (response?.error) {
+          alert(`Kick failed: ${response.error}`);
+        }
+      });
+    }
+  };
+
   return (
     <div>
       <h1>Lobby</h1>
+      <h2>Code {roomCode} </h2>
       <ul>
-        {appState?.roomData?.users.map((user) => (
-          <li key={user.id}>{user.userName}</li>
+        {roomData?.users?.map((user) => (
+          <li>
+            {userIsHost && user.socketId !== roomData.host.id && (
+              <button
+                onClick={() => handleKickPlayer(user)}
+                style={{ 
+                  backgroundColor: "#D3D3D3",
+                  marginRight: "8px",
+                  color: "black",
+                  border: "none",
+                  borderRadius: "12px",
+                  cursor: "pointer" 
+                }}
+                title={`Kick ${user.userName}`}
+              >
+                kick
+              </button>
+            )}
+            <span>
+              {user.userName}{" "}
+            </span>
+          </li>
         ))}
       </ul>
+
       <button
         style={{
           backgroundColor: "#f44336",
@@ -76,6 +126,7 @@ const Lobby = ({ appState, setAppState }) => {
           Start Game
         </button>
       )}
+      <ChatBox appState={appState} setAppState={setAppState} />
     </div>
   );
 };

@@ -57,6 +57,26 @@ module.exports = function (io) {
             io.to(inputCode).emit("roomDataUpdated", inputCode, updatedRoom);
         });
 
+        socket.on("kickPlayer", ({ roomCode, targetSocketId }, callback) => {
+            try {
+            console.log("Attempting to kick", targetSocketId, "from", roomCode);
+                const room = roomService.getRoomByCode(roomCode);
+                if (!room) throw new Error("Room not found");
+                if (room.host.id !== socket.id) throw new Error("Only host can kick");
+            
+                const result = roomService.removeUserFromRoom(roomCode, targetSocketId);
+                if (!result.success) throw new Error("Failed to remove player");
+          
+                io.to(roomCode).emit("roomDataUpdated", roomCode, result.roomData);
+                io.to(targetSocketId).emit("youWereKicked");
+            
+                callback({ success: true });
+            } catch (error) {
+                console.error("Kick error:", error.message);
+                callback({ error: error.message });
+            }
+            });
+
         // Handle leaving a room
         socket.on("leaveRoom", ({ inputCode }) => {
             const result = roomService.removeUserFromRoom(inputCode, socket.id);
