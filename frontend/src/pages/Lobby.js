@@ -19,6 +19,8 @@ const Lobby = ({ appState, setAppState }) => {
       socket.emit("updateRoomData", roomCode, {
         ...roomData,
         gameStarted: true,
+        round: 1,
+        timeLeft: roomData.maxTime,
       });
     }
   };
@@ -39,13 +41,13 @@ const Lobby = ({ appState, setAppState }) => {
     const handleKick = () => {
       navigate("/");
       window.location.reload();
-    };  
+    };
     socket.on("youWereKicked", handleKick);
     return () => {
       socket.off("youWereKicked", handleKick);
     };
   }, [navigate, socket]);
- 
+
   // Function to handle the leave game button click
   const handleLeaveGame = () => {
     if (socket) {
@@ -56,20 +58,42 @@ const Lobby = ({ appState, setAppState }) => {
   const handleKickPlayer = async (user) => {
     if (window.confirm(`Kick ${user.userName}?`)) {
       console.log("Attempting to kick", user);
-      socket.emit("kickPlayer", {
-        roomCode,
-        targetSocketId: user.socketId
-      }, (response) => {
-        if (response?.error) {
-          alert(`Kick failed: ${response.error}`);
+      socket.emit(
+        "kickPlayer",
+        {
+          roomCode,
+          targetSocketId: user.socketId,
+        },
+        (response) => {
+          if (response?.error) {
+            alert(`Kick failed: ${response.error}`);
+          }
         }
-      });
+      );
     }
   };
+
+  console.log(appState);
+
+  const timeLeft = roomData?.timeLeft || roomData?.maxTime;
+  const round = roomData?.round || 1;
 
   return (
     <div>
       <h1>Lobby</h1>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          fontSize: "1.5rem",
+          fontWeight: "bold",
+          marginTop: "20px",
+          marginBottom: "20px",
+        }}
+      >
+        <p>Time: {timeLeft}</p>
+        <p>Round {round} of 3</p>
+      </div>
       <h2>Code {roomCode} </h2>
       <ul>
         {roomData?.users?.map((user) => (
@@ -77,22 +101,20 @@ const Lobby = ({ appState, setAppState }) => {
             {userIsHost && user.socketId !== roomData.host.id && (
               <button
                 onClick={() => handleKickPlayer(user)}
-                style={{ 
+                style={{
                   backgroundColor: "#D3D3D3",
                   marginRight: "8px",
                   color: "black",
                   border: "none",
                   borderRadius: "12px",
-                  cursor: "pointer" 
+                  cursor: "pointer",
                 }}
                 title={`Kick ${user.userName}`}
               >
                 kick
               </button>
             )}
-            <span>
-              {user.userName}{" "}
-            </span>
+            <span>{user.userName} </span>
           </li>
         ))}
       </ul>
