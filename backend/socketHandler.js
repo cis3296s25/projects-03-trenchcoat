@@ -20,8 +20,6 @@ module.exports = function (io) {
       console.log("Room created:", roomCode, roomData);
     });
 
-    socket.on("gameStarted", (roomCode) => {});
-
     // Handle room data updates
     socket.on("updateRoomData", (roomCode, roomData) => {
       const room = roomService.getRoomByCode(roomCode);
@@ -37,7 +35,14 @@ module.exports = function (io) {
         return;
       }
 
-      // Check if the game is starting
+      // Check if the game is starting 
+      if (roomData.gameStarted && !room.gameStarted) {
+          console.log("Game is starting - clearing chat history");
+          roomService.clearRoomChat(roomCode);
+          roomData.chatHistory = [];
+      }
+
+      // Check if the game is starting with timer
       if (roomData.gameStarted && room.timeLeft === room.maxTime) {
         const interval = setInterval(() => {
           const currentRoom = roomService.getRoomByCode(roomCode);
@@ -68,6 +73,10 @@ module.exports = function (io) {
       console.log("Joining room:", inputCode, userName);
 
       const room = roomService.getRoomByCode(inputCode);
+      if (room && room.strokes) {
+        socket.emit("canvasState", room.strokes);
+      }
+
       if (!room) {
         console.log("Room not found:", inputCode);
         return;
@@ -135,18 +144,31 @@ module.exports = function (io) {
     });
 
     socket.on("strokeDone", (code, stroke) => {
+      const room = roomService.getRoomByCode(code);
+      if (room) {
+        // Save the stroke to the room data
+        room.strokes.push(stroke);
+      }
       io.to(code).emit("strokeDone", stroke);
       socket.broadcast.emit("strokeDone", stroke);
     });
 
-    socket.on("undoLastStroke", () => {
+    socket.on("undoLastStroke", (code) => { 
+      io.to(code).emit("undoLastStroke");
       socket.broadcast.emit("undoLastStroke");
-      socket.emit("undoLastStroke");
     });
 
-    socket.on("clearCanvas", () => {
+    socket.on("clearCanvas", (code) => { 
+      io.to(code).emit("clearCanvas");
       socket.broadcast.emit("clearCanvas");
-      socket.emit("clearCanvas");
+    });
+
+    // Event handler for when a user joins late
+    socket.on("requestCanvasState", (code) => {
+      const room = roomService.getRoomByCode(code);
+      if (room && room.strokes) {
+        socket.emit("canvasState", room.strokes);
+      }
     });
 
     // Handle chat messages

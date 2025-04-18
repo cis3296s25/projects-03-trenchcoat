@@ -28,6 +28,9 @@ function createRoom(roomCode, hostUser) {
 
     // Index of the current user drawing
     currentDrawerIndex: 0,
+      
+    // Used for showing player who joined lated the canvas
+    strokes: []
   };
 }
 
@@ -40,7 +43,13 @@ function addChatMessage(room, user, message) {
   return room;
 }
 
+function clearChatHistory(room) {
+    room.chatHistory = [];
+    return room;
+}
+
 module.exports = {
-  createRoom,
-  addChatMessage,
+    createRoom,
+    addChatMessage,
+    clearChatHistory
 };

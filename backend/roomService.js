@@ -1,5 +1,5 @@
 const { generateRandomCode } = require("./helpers");
-const { createRoom, addChatMessage } = require("./roomModel");
+const { createRoom, addChatMessage, clearChatHistory } = require("./roomModel");
 const randomWords = require("word-pictionary-list");
 
 const rooms = {};
@@ -123,12 +123,22 @@ function handleTurnEnd(io, roomCode, clearInterval) {
   io.to(roomCode).emit("roomDataUpdated", roomCode, room);
 }
 
+function clearRoomChat(roomCode) {
+    if (!rooms[roomCode]) {
+        return null;
+    }
+
+    clearChatHistory(rooms[roomCode]);
+    return rooms[roomCode];
+}
+
 module.exports = {
-  createGameRoom,
-  getRoomByCode,
-  updateRoomData,
-  addUserToRoom,
-  removeUserFromRoom,
-  sendChatMessage,
-  handleTurnEnd,
+    createGameRoom,
+    getRoomByCode,
+    updateRoomData,
+    addUserToRoom,
+    removeUserFromRoom,
+    sendChatMessage,
+    clearRoomChat,
+    handleTurnEnd
 };

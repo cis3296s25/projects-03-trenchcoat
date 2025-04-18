@@ -143,12 +143,31 @@ function DrawingCanvas(props) {
   };
 
   const handleUndo = () => {
-    socket.emit("undoLastStroke");
+    socket.emit("undoLastStroke", gameCode);
   };
 
   const handleClear = () => {
-    socket.emit("clearCanvas");
+    socket.emit("clearCanvas", gameCode);
   };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    // Request canvas state when component mounts
+    if (gameCode) {
+      socket.emit("requestCanvasState", gameCode);
+    }
+
+    // Handle receiving canvas state
+    socket.on("canvasState", (strokes) => {
+      setPaths(strokes);
+      redrawAll(strokes);
+    });
+
+    return () => {
+      socket.off("canvasState");
+    };
+  }, [socket, gameCode]);
 
   return (
     <div
