@@ -150,17 +150,14 @@ module.exports = function (io) {
         room.strokes.push(stroke);
       }
       io.to(code).emit("strokeDone", stroke);
-      socket.broadcast.emit("strokeDone", stroke);
     });
 
     socket.on("undoLastStroke", (code) => { 
       io.to(code).emit("undoLastStroke");
-      socket.broadcast.emit("undoLastStroke");
     });
 
     socket.on("clearCanvas", (code) => { 
       io.to(code).emit("clearCanvas");
-      socket.broadcast.emit("clearCanvas");
     });
 
     // Event handler for when a user joins late
