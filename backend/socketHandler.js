@@ -32,6 +32,14 @@ module.exports = function (io) {
                 return;
             }
 
+            // Check if the game is starting 
+            if (roomData.gameStarted && !room.gameStarted) {
+                console.log("Game is starting - clearing chat history");
+                roomService.clearRoomChat(roomCode);
+
+                roomData.chatHistory = [];
+            }
+
             const updatedRoom = roomService.updateRoomData(roomCode, roomData);
             io.to(roomCode).emit("roomDataUpdated", roomCode, updatedRoom);
         });
@@ -41,6 +49,10 @@ module.exports = function (io) {
             console.log("Joining room:", inputCode, userName);
 
             const room = roomService.getRoomByCode(inputCode);
+            if (room && room.strokes) {
+                socket.emit("canvasState", room.strokes);
+            }
+
             if (!room) {
                 console.log("Room not found:", inputCode);
                 return;
@@ -108,18 +120,28 @@ module.exports = function (io) {
         });
 
         socket.on("strokeDone", (code, stroke) => {
+            const room = roomService.getRoomByCode(code);
+            if (room) {
+                // Save the stroke to the room data
+                room.strokes.push(stroke);
+            }
             io.to(code).emit("strokeDone", stroke);
-            socket.broadcast.emit("strokeDone", stroke);
+        });
+        
+        socket.on("undoLastStroke", (code) => { 
+            io.to(code).emit("undoLastStroke");
         });
 
-        socket.on("undoLastStroke", () => {
-            socket.broadcast.emit("undoLastStroke");
-            socket.emit("undoLastStroke");
+        socket.on("clearCanvas", (code) => { 
+            io.to(code).emit("clearCanvas");
         });
 
-        socket.on("clearCanvas", () => {
-            socket.broadcast.emit("clearCanvas");
-            socket.emit("clearCanvas");
+        // Event handler for when a user joins late
+        socket.on("requestCanvasState", (code) => {
+            const room = roomService.getRoomByCode(code);
+            if (room && room.strokes) {
+                socket.emit("canvasState", room.strokes);
+            }
         });
 
         // Handle chat messages

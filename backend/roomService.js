@@ -1,5 +1,5 @@
 const { generateRandomCode } = require("./helpers");
-const { createRoom, addChatMessage } = require("./roomModel");
+const { createRoom, addChatMessage, clearChatHistory } = require("./roomModel");
 
 const rooms = {};
 
@@ -81,6 +81,15 @@ function sendChatMessage(roomCode, user, message) {
     return rooms[roomCode];
 }
 
+function clearRoomChat(roomCode) {
+    if (!rooms[roomCode]) {
+        return null;
+    }
+
+    clearChatHistory(rooms[roomCode]);
+    return rooms[roomCode];
+}
+
 module.exports = {
     createGameRoom,
     getRoomByCode,
@@ -88,4 +97,5 @@ module.exports = {
     addUserToRoom,
     removeUserFromRoom,
     sendChatMessage,
+    clearRoomChat
 };

@@ -8,6 +8,7 @@ function createRoom(roomCode, hostUser) {
         randomWord: randomWords(1)[0],
         chatHistory: [],
         gameStarted: false,
+        strokes: []
     };
 }
 
@@ -20,7 +21,13 @@ function addChatMessage(room, user, message) {
     return room;
 }
 
+function clearChatHistory(room) {
+    room.chatHistory = [];
+    return room;
+}
+
 module.exports = {
     createRoom,
     addChatMessage,
+    clearChatHistory
 };
