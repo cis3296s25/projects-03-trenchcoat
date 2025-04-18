@@ -185,10 +185,39 @@ module.exports = function (io) {
         userName,
       };
 
+      // const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
+      // io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
+
+      // console.log("Chat message sent:", message, gameCode, userName);
+
+      const randomWord = room.randomWord?.toLowerCase();
+      const cleanedMessage = message.trim().toLowerCase();
+      const isCorrectGuess = cleanedMessage===(randomWord);
+
+      // Send different chat message depending on correct guess
+      if (isCorrectGuess) {
+        const customMsg = `${userName} guessed the word!`;
+
+        io.to(gameCode).emit("receive-chat", {
+          msg: customMsg,
+          player: user,
+          rightGuess: true,
+          players: room.users,
+        });
+
+        console.log("Correct guess by", userName, ":", message);
+      } else {
+        io.to(gameCode).emit("receive-chat", {
+          msg: message,
+          player: user,
+          rightGuess: false,
+          players: room.users,
+        });
+      }
+
+      // Always store original message in room history
       const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
       io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
-
-      console.log("Chat message sent:", message, gameCode, userName);
     });
   });
 };
