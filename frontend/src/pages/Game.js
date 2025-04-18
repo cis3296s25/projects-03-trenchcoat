@@ -18,10 +18,15 @@ function Game({ appState, setAppState }) {
     console.log(appState);
     if (!appState?.roomData) {
       navigate(`/join/${roomCode}`);
+    } else if (appState?.roomData && appState.roomData.gameStarted === false) {
+      navigate(`/lobby/${roomCode}`);
     }
   }, [appState, navigate, roomCode]);
 
   const { socket } = appState;
+
+  const currentDrawer =
+    appState?.roomData?.users[appState?.roomData?.currentDrawerIndex]?.userName;
 
   return (
     <div>
@@ -42,6 +47,9 @@ function Game({ appState, setAppState }) {
       >
         Random Word: {appState?.roomData?.randomWord}
       </h1>
+      <p>Time: {appState?.roomData?.timeLeft || 0}</p>
+      <p>Round {appState?.roomData?.round || 1} of 3</p>
+      <p>Currently Drawing: {currentDrawer}</p>
       <button
         style={{
           backgroundColor: "#f44336",
