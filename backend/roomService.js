@@ -58,13 +58,10 @@ function removeUserFromRoom(roomCode, userId) {
 
   const isHost = user.id === room.host.id;
 
-  // Remove user from room
   room.users = room.users.filter((u) => u.id !== userId);
 
-  // Add leave message
   addChatMessage(room, user, "left the game.");
 
-  // If host left, mark room for deletion
   if (isHost) {
     delete rooms[roomCode];
     return { success: true, roomData: null, isHost: true };
@@ -74,8 +71,20 @@ function removeUserFromRoom(roomCode, userId) {
 }
 
 function sendChatMessage(roomCode, user, message) {
+  const room = getRoomByCode(roomCode);
+  
   if (!rooms[roomCode]) {
     return null;
+  }
+
+  const currentWord = room.randomWord?.toLowerCase();
+  const enteredMessage = message.trim().toLowerCase();
+
+  console.log(`Checking guess: "${enteredMessage}" against the word: "${currentWord}"`);
+  const rightGuess = enteredMessage === currentWord;
+  
+  if (rightGuess) {
+    return room;
   }
 
   addChatMessage(rooms[roomCode], user, message);

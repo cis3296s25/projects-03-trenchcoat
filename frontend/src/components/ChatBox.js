@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 
 const ChatBox = (props) => {
   const { appState, setAppState } = props;
   const { socket, userName } = appState;
   const messagesEndRef = useRef(null);
-  const [joinedChat, setJoinedChat] = React.useState(false);
+  const [localChats, setLocalChats] = useState([]);
 
   // Add this style for the chat messages container
   const styles = {
@@ -41,8 +41,9 @@ const ChatBox = (props) => {
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [appState?.roomData?.chatHistory]);
+  }, [appState?.roomData?.chatHistory, localChats]);
 
+  // Check for correct guesses
   React.useEffect(() => {
     if (appState?.roomData?.randomWord && appState?.roomData?.chatHistory) {
       const chatHistory = appState.roomData.chatHistory;
@@ -57,26 +58,29 @@ const ChatBox = (props) => {
     }
   }, [appState.roomData?.randomWord, appState.roomData?.chatHistory]);
 
-  // When user joins game, send a message to the server/chatbox
-  React.useEffect(() => {
-    if (socket && appState?.roomData) {
-      if (!joinedChat) {
-        setJoinedChat(true);
-        socket.emit("chatMessageSend", {
-          message: "joined the game",
-          gameCode: appState?.roomData?.code,
-          userName,
-        });
-      }
+  // Listen for new chat messages
+  useEffect(() => {
+    if (socket) {
+      socket.on("receive-chat", ({ msg, player, rightGuess }) => {
+        const sender = player?.userName || player?.name || "System";
+        const message = rightGuess ? `${sender} guessed the word!` : msg;
+        
+        setLocalChats(prev => [...prev, { 
+          sender, 
+          message, 
+          rightGuess 
+        }]);
+      });
+
+      return () => {
+        socket.off("receive-chat");
+      };
     }
-  }, [socket, appState?.roomData, joinedChat, userName]);
+  }, [socket]);
 
   function onChatboxChange(e) {
     const message = e.target.value;
-
-    // check for return/enter key
     if (message.includes("\n")) {
-
       const trimmedMessage = message.replace("\n", "").trim();
 
       if (trimmedMessage.length > 0) {
@@ -85,7 +89,7 @@ const ChatBox = (props) => {
         if (socket) {
           console.log("sending...");
           socket.emit("chatMessageSend", {
-            message: message.replace("\n", ""),
+            message: trimmedMessage,
             gameCode: appState?.roomData?.code,
             userName,
           });
@@ -96,15 +100,26 @@ const ChatBox = (props) => {
     }
   }
 
+  const allChats = [
+    ...(appState?.roomData?.chatHistory || []).map(chat => ({
+      sender: chat.user.userName,
+      message: chat.message,
+      rightGuess: chat.message.includes(" guessed the word!")
+    })),
+    ...localChats
+  ];
+
   return (
     <div style={styles.container}>
       <div style={styles.messagesContainer}>
-        {appState?.roomData?.chatHistory &&
-          appState?.roomData?.chatHistory.map((chat, index) => (
-            <div key={index}>
-              <strong>{chat.user.userName}</strong>: {chat.message}
-            </div>
-          ))}
+        {allChats.map((chat, index) => (
+          <div 
+            key={`chat-${index}`}
+            style={chat.rightGuess ? { color: 'green', fontWeight: 'bold' } : {}}
+          >
+            <strong>{chat.sender}</strong>: {chat.message}
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
       <textarea onChange={onChatboxChange} style={styles.textarea}></textarea>
