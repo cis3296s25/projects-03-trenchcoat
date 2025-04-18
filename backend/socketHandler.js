@@ -153,10 +153,22 @@ module.exports = function (io) {
     });
 
     socket.on("undoLastStroke", (code) => { 
+      const room = roomService.getRoomByCode(code);
+      if (room && room.strokes.length > 0) {
+        // Remove the last stroke from the room data
+        room.strokes.pop();
+      }
+
       io.to(code).emit("undoLastStroke");
     });
 
     socket.on("clearCanvas", (code) => { 
+      const room = roomService.getRoomByCode(code);
+      if (room) {
+        // Clear all strokes in the room data
+        room.strokes = [];
+      }
+
       io.to(code).emit("clearCanvas");
     });
 

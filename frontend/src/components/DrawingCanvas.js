@@ -143,10 +143,21 @@ function DrawingCanvas(props) {
   };
 
   const handleUndo = () => {
+    setPaths(prevPaths => {
+      const updatedPaths = prevPaths.slice(0, -1);
+      redrawAll(updatedPaths);
+      return updatedPaths;
+    });
+    
     socket.emit("undoLastStroke", gameCode);
   };
 
   const handleClear = () => {
+    setPaths([]);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     socket.emit("clearCanvas", gameCode);
   };
 
