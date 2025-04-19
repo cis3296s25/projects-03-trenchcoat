@@ -189,10 +189,7 @@ module.exports = function (io) {
         return;
       }
 
-      const user = {
-        id: socket.id,
-        userName,
-      };
+      const user = room.users.find((u) => u.id === socket.id);
 
       // const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
       // io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
@@ -204,18 +201,33 @@ module.exports = function (io) {
       const isCorrectGuess = cleanedMessage===(randomWord);
 
       // Send different chat message depending on correct guess
-      if (isCorrectGuess) {
+      if (isCorrectGuess && !room.correctGuessers.includes(user.id)) {
+        const drawer = room.users[room.currentDrawerIndex];
+      
+        // Award points to guesser based on time
+        const guesserPoints = Math.ceil(room.timeLeft * 3);
+        user.score = (user.score || 0) + guesserPoints;
+      
+        // Award points to drawer
+        let drawerPoints = 0;
+        if (room.correctGuessers.length === 0) {
+          drawerPoints = 100; // first correct guess
+        } else {
+          drawerPoints = 50; // each additional
+        }
+        drawer.score = (drawer.score || 0) + drawerPoints;
+      
+        room.correctGuessers.push(user.id);
+      
+        // Send success message
         const customMsg = `${userName} guessed the word!`;
-
         io.to(gameCode).emit("receive-chat", {
           msg: customMsg,
           player: user,
           rightGuess: true,
           players: room.users,
         });
-
-        console.log("Correct guess by", userName, ":", message);
-      } else {
+      }else {
         io.to(gameCode).emit("receive-chat", {
           msg: message,
           player: user,

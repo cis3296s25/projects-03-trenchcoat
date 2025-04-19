@@ -16,6 +16,9 @@ function createRoom(roomCode, hostUser) {
     // Game state
     gameStarted: false,
 
+    //Game Score
+    score: 0,
+
     // Current round
     round: 1,
 
@@ -31,6 +34,8 @@ function createRoom(roomCode, hostUser) {
       
     // Used for showing player who joined lated the canvas
     strokes: []
+
+    
   };
 }
 
