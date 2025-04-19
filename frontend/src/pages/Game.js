@@ -50,6 +50,16 @@ function Game({ appState, setAppState }) {
       <p>Time: {appState?.roomData?.timeLeft || 0}</p>
       <p>Round {appState?.roomData?.round || 1} of 3</p>
       <p>Currently Drawing: {currentDrawer}</p>
+      <h2>Scoreboard</h2>
+      <ul>
+        {appState?.roomData?.users.map((user, index) => (
+          <li key={index}>
+            {user.userName}: {user.score || 0} pts
+          </li>
+        ))}
+      </ul>
+
+      
       <button
         style={{
           backgroundColor: "#f44336",
@@ -63,7 +73,6 @@ function Game({ appState, setAppState }) {
       >
         Leave Game
       </button>
-
       <ChatBox appState={appState} setAppState={setAppState} />
     </div>
   );

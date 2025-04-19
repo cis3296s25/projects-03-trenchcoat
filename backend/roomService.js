@@ -13,6 +13,9 @@ function createGameRoom(userName, socketId) {
   };
 
   rooms[roomCode] = createRoom(roomCode, user);
+  //correct guessers for round
+  rooms[roomCode].correctGuessers = [];
+
 
   return {
     roomCode,
@@ -128,6 +131,7 @@ function handleTurnEnd(io, roomCode, clearInterval) {
 
   room.timeLeft = room.maxTime;
   room.randomWord = randomWords(1)[0];
+  room.correctGuessers = []; // correct guessers reset for each new turn
 
   io.to(roomCode).emit("roomDataUpdated", roomCode, room);
 }
