@@ -150,17 +150,26 @@ module.exports = function (io) {
         room.strokes.push(stroke);
       }
       io.to(code).emit("strokeDone", stroke);
-      socket.broadcast.emit("strokeDone", stroke);
     });
 
     socket.on("undoLastStroke", (code) => { 
+      const room = roomService.getRoomByCode(code);
+      if (room && room.strokes.length > 0) {
+        // Remove the last stroke from the room data
+        room.strokes.pop();
+      }
+
       io.to(code).emit("undoLastStroke");
-      socket.broadcast.emit("undoLastStroke");
     });
 
     socket.on("clearCanvas", (code) => { 
+      const room = roomService.getRoomByCode(code);
+      if (room) {
+        // Clear all strokes in the room data
+        room.strokes = [];
+      }
+
       io.to(code).emit("clearCanvas");
-      socket.broadcast.emit("clearCanvas");
     });
 
     // Event handler for when a user joins late
