@@ -1,76 +1,93 @@
-import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-function JoinGame() {
-    const [code, setCode] = useState('');
-    const [username, setUsername] = useState('');
-    const [isValid, setIsValid] = useState(null);
-    const [socket, setSocket] = useState(null);
-    const [joined, setJoined] = useState(false);
+function JoinGame(props) {
+  const { appState, setAppState } = props;
+  const { userName, code, isValid, socket, userList, joined } = appState;
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        
-        // for local testing use "http://localhost:3001"
-        // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-        const socket = io("http://localhost:3001");
-        setSocket(socket);
+  useEffect(() => {
+    if (!socket) return;
 
-        // Clean up on unmount
-        return () => {
-            socket.disconnect();
-        };
-    }, []);
+    // Listen for verification results
+    socket.on("verificationResult", (result) => {
+      setAppState((prevData) => ({
+        ...prevData,
+        joined: result,
+        isValid: result,
+      }));
+    });
 
-    useEffect(() => {
-        if (!socket) return;
+    socket.on("userList", (users) => {
+      setAppState((prevData) => ({
+        ...prevData,
+        userList: users,
+      }));
+    });
 
-        // Listen for verification results
-        socket.on('verificationResult', (result) => {
-            setIsValid(result);
-            if (result) {
-                setJoined(true);
-            }
-        });
+    socket.on("gameStarted", () => {
+      console.log("Game started! Navigating all users...");
+      navigate("/game");
+    });
 
-        return () => {
-            socket.off('verificationResult');
-            socket.off('userList');
-        };
-    }, [socket]);
-
-    // Function to verify the code
-    const verifyGameCode = () => {
-        if (socket) {
-            socket.emit('verifyGameCode', code, username);
-        }
+    return () => {
+      socket.off("verificationResult");
+      socket.off("userList");
+      socket.off("gameStarted");
     };
+  }, [socket, navigate, setAppState]);
 
-    return (
+  // Function to verify the code
+  const verifyGameCode = () => {
+    if (socket) {
+      socket.emit("verifyGameCode", code, userName);
+    }
+  };
+
+  const handleStartGame = () => {
+    if (socket) {
+      socket.emit("startGame");
+    }
+  };
+
+  return (
+    <div>
+      {!joined ? (
         <div>
-            {!joined ? (
-                <div>
-                    <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Enter your username"
-                    />
-                    <input
-                        type="text"
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        placeholder="Enter game code"
-                    />
-                    <button onClick={verifyGameCode}>Join Game</button>
-                    {isValid === false && <p>Invalid code, please try again.</p>}
-                </div>
-            ) : (
-                <div>
-                    <h1>connected!</h1>
-                </div>
-            )}
+          <h1>Join Game</h1>
+          <input
+            type="text"
+            value={userName}
+            onChange={(e) =>
+              setAppState({ ...appState, userName: e.target.value })
+            }
+            placeholder="Enter your username"
+          />
+          <input
+            type="text"
+            value={code}
+            onChange={(e) => setAppState({ ...appState, code: e.target.value })}
+            placeholder="Enter game code"
+          />
+          <button onClick={verifyGameCode}>Join Game</button>
+          {isValid === false && <p>Invalid code, please try again.</p>}
         </div>
-    );
+      ) : (
+        <div>
+          <h1>Lobby</h1>
+          <h2>Current Users:</h2>
+          <ul>
+            {userList.map((user) => (
+              <li key={user.id}>
+                {user.username} {user.id === socket.id ? "(You)" : ""}
+              </li>
+            ))}
+          </ul>
+          <button onClick={handleStartGame}>Start Game</button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default JoinGame;
