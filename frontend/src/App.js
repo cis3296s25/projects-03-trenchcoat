@@ -19,7 +19,7 @@ function App() {
   useEffect(() => {
     // for local testing use "http://localhost:3001"
     // for testing on render use "https://projects-03-trenchcoat.onrender.com"
-    const newSocket = io("http://localhost:3001");
+    const newSocket = io(process.env.REACT_APP_BACKEND_URL || "http://localhost:3001");
 
     setAppState((prevData) => ({
       ...prevData,
