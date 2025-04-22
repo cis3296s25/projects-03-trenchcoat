@@ -5,6 +5,8 @@ const ChatBox = (props) => {
   const { socket, userName } = appState;
   const messagesEndRef = useRef(null);
   const [localChats, setLocalChats] = useState([]);
+  const [prevChatsLength, setPrevChatsLength] = useState(0);
+  const [prevLocalChatsLength, setPrevLocalChatsLength] = useState(0);
 
   const styles = {
     container: {
@@ -13,13 +15,14 @@ const ChatBox = (props) => {
       padding: "1rem",
       backgroundColor: "#f9f9f9",
       width: "20%",
-      position: "absolute",
+      position: "fixed",
       right: 0,
       top: 0,
-      bottom: 0,
+      height: "100vh",
       boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
       display: "flex",
-      flexDirection: "column"
+      flexDirection: "column",
+      zIndex: 10
     },
     messagesContainer: {
       overflowY: "auto",
@@ -37,34 +40,49 @@ const ChatBox = (props) => {
     }
   };
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll only when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const currentChatsLength = appState?.roomData?.chatHistory?.length || 0;
+    const currentLocalChatsLength = localChats.length;
+
+    // Check if there are new messages
+    const hasNewMessages =
+      currentChatsLength > prevChatsLength ||
+      currentLocalChatsLength > prevLocalChatsLength;
+
+    // Update previous lengths for next comparison
+    setPrevChatsLength(currentChatsLength);
+    setPrevLocalChatsLength(currentLocalChatsLength);
+
+    // Only scroll if there are new messages
+    if (hasNewMessages && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [appState?.roomData?.chatHistory, localChats]);
 
   // Listen for new chat messages
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleReceiveChat = ({ msg, player, rightGuess }) => {
       const sender = player?.userName || player?.name || "System";
       const message = rightGuess ? `${sender} guessed the word!` : msg;
-      
+
       // Check if this message is already in the server history
       const isInServerHistory = appState?.roomData?.chatHistory?.some(
         chat => chat.message === message && chat.user.userName === sender
       );
-      
+
       if (!isInServerHistory) {
-        setLocalChats(prev => [...prev, { 
-          sender, 
-          message, 
+        setLocalChats(prev => [...prev, {
+          sender,
+          message,
           rightGuess,
           timestamp: Date.now()
         }]);
       }
     };
-    
+
     socket.on("receive-chat", handleReceiveChat);
     return () => socket.off("receive-chat", handleReceiveChat);
   }, [socket, appState?.roomData?.chatHistory]);
@@ -72,14 +90,14 @@ const ChatBox = (props) => {
   // Clean up local chats when they appear in server history
   useEffect(() => {
     if (!appState?.roomData?.chatHistory || localChats.length === 0) return;
-    
-    const updatedLocalChats = localChats.filter(localChat => 
-      !appState.roomData.chatHistory.some(serverChat => 
-        serverChat.message === localChat.message && 
+
+    const updatedLocalChats = localChats.filter(localChat =>
+      !appState.roomData.chatHistory.some(serverChat =>
+        serverChat.message === localChat.message &&
         serverChat.user.userName === localChat.sender
       )
     );
-    
+
     if (updatedLocalChats.length !== localChats.length) {
       setLocalChats(updatedLocalChats);
     }
@@ -89,13 +107,13 @@ const ChatBox = (props) => {
   const handleSendMessage = (e) => {
     const message = e.target.value;
     if (!message.includes("\n")) return;
-    
+
     const trimmedMessage = message.replace("\n", "").trim();
     if (trimmedMessage.length === 0) {
       e.target.value = "";
       return;
     }
-    
+
     e.target.value = "";
     socket?.emit("chatMessageSend", {
       message: trimmedMessage,
@@ -119,7 +137,7 @@ const ChatBox = (props) => {
     <div style={styles.container}>
       <div style={styles.messagesContainer}>
         {allChats.map((chat, index) => (
-          <div 
+          <div
             key={`chat-${index}`}
             style={chat.rightGuess ? { color: 'green', fontWeight: 'bold' } : {}}
           >
