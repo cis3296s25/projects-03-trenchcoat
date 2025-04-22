@@ -90,7 +90,6 @@ function sendChatMessage(roomCode, user, message) {
     return room;
   }
 
-  addChatMessage(rooms[roomCode], user, message);
   return rooms[roomCode];
 }
 
