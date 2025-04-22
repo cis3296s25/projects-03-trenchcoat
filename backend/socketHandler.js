@@ -191,23 +191,18 @@ module.exports = function (io) {
 
       const user = room.users.find((u) => u.id === socket.id);
 
-      // const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
-      // io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
-
-      // console.log("Chat message sent:", message, gameCode, userName);
-
       const randomWord = room.randomWord?.toLowerCase();
       const cleanedMessage = message.trim().toLowerCase();
-      const isCorrectGuess = cleanedMessage===(randomWord);
+      const isCorrectGuess = cleanedMessage === (randomWord);
 
-      // Send different chat message depending on correct guess
+      // For correct guesses
       if (isCorrectGuess && !room.correctGuessers.includes(user.id)) {
         const drawer = room.users[room.currentDrawerIndex];
-      
+
         // Award points to guesser based on time
         const guesserPoints = Math.ceil(room.timeLeft * 3);
         user.score = (user.score || 0) + guesserPoints;
-      
+
         // Award points to drawer
         let drawerPoints = 0;
         if (room.correctGuessers.length === 0) {
@@ -216,29 +211,44 @@ module.exports = function (io) {
           drawerPoints = 50; // each additional
         }
         drawer.score = (drawer.score || 0) + drawerPoints;
-      
+
         room.correctGuessers.push(user.id);
-      
+
         // Send success message
-        const customMsg = `${userName} guessed the word!`;
+        const correctGuessMsg = `${userName} guessed the word!`;
+
+        // Store the correct guess notification in the chat history 
+        // instead of the original message
+        const updatedRoom = roomService.sendChatMessage(gameCode, user, correctGuessMsg);
+
+        // Emit the chat notification
         io.to(gameCode).emit("receive-chat", {
-          msg: customMsg,
+          msg: correctGuessMsg,
           player: user,
           rightGuess: true,
           players: room.users,
+          timestamp: new Date()
         });
-      }else {
+
+        // Update room data with the correct guess message in chat history
+        io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
+      } else {
+        // Regular message (not a correct guess)
+        // Store the original message
+        const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
+
+        // Emit the chat message
         io.to(gameCode).emit("receive-chat", {
           msg: message,
           player: user,
           rightGuess: false,
           players: room.users,
+          timestamp: new Date()
         });
-      }
 
-      // Always store original message in room history
-      const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
-      io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
+        // Update room data with the message in chat history
+        io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
+      }
     });
   });
 };
