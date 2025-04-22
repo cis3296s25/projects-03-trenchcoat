@@ -5,8 +5,41 @@ const ChatBox = (props) => {
   const { socket, userName } = appState;
   const messagesEndRef = useRef(null);
   const [localChats, setLocalChats] = useState([]);
-  const [prevChatsLength, setPrevChatsLength] = useState(0);
-  const [prevLocalChatsLength, setPrevLocalChatsLength] = useState(0);
+
+  // Determine if current user is the drawer or has already guessed correctly
+  const isCurrentUserDrawer = React.useMemo(() => {
+    if (!appState?.roomData?.gameStarted || !socket) return false;
+
+    const currentDrawerIndex = appState.roomData.currentDrawerIndex;
+    const currentDrawer = appState.roomData.users[currentDrawerIndex];
+
+    // The socketId property is used in some places, id in others
+    return (currentDrawer?.socketId === socket.id) || (currentDrawer?.id === socket.id);
+  }, [appState?.roomData, socket]);
+
+  // Check if current user has already guessed correctly in this round
+  const hasGuessedCorrectly = React.useMemo(() => {
+    if (!appState?.roomData?.gameStarted || !socket || !appState?.roomData?.correctGuessers) return false;
+
+    // Check if user's socket ID is in the correctGuessers array
+    return appState.roomData.correctGuessers.includes(socket.id);
+  }, [appState?.roomData, socket]);
+
+  // Debugging
+  useEffect(() => {
+    if (appState?.roomData?.gameStarted) {
+      console.log("Current drawer: ", appState.roomData.users[appState.roomData.currentDrawerIndex]);
+      console.log("My socket ID: ", socket?.id);
+      console.log("Am I the drawer? ", isCurrentUserDrawer);
+      console.log("Have I guessed correctly? ", hasGuessedCorrectly);
+      console.log("Correct guessers: ", appState.roomData.correctGuessers);
+    }
+  }, [appState?.roomData, socket, isCurrentUserDrawer, hasGuessedCorrectly]);
+
+  // Determine if the chat should be disabled for the current user
+  const isChatDisabled = isCurrentUserDrawer || hasGuessedCorrectly;
+
+  
 
   const styles = {
     container: {
@@ -15,14 +48,13 @@ const ChatBox = (props) => {
       padding: "1rem",
       backgroundColor: "#f9f9f9",
       width: "20%",
-      position: "fixed",
+      position: "absolute",
       right: 0,
       top: 0,
-      height: "100vh",
+      bottom: 0,
       boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
       display: "flex",
-      flexDirection: "column",
-      zIndex: 10
+      flexDirection: "column"
     },
     messagesContainer: {
       overflowY: "auto",
@@ -37,27 +69,25 @@ const ChatBox = (props) => {
       left: 10,
       right: 10,
       height: "100px",
+      backgroundColor: isChatDisabled ? "#e0e0e0" : "white",
+      color: isChatDisabled ? "#888888" : "black",
+      resize: "none",
+    },
+    drawerMessage: {
+      position: "absolute",
+      bottom: 0,
+      left: 10,
+      right: 10,
+      textAlign: "center",
+      color: "#666",
+      fontSize: "12px",
+      fontStyle: "italic",
     }
   };
 
-  // Auto-scroll when new messages arrive
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    const currentChatsLength = appState?.roomData?.chatHistory?.length || 0;
-    const currentLocalChatsLength = localChats.length;
-
-    // Check if there are new messages
-    const hasNewMessages =
-      currentChatsLength > prevChatsLength ||
-      currentLocalChatsLength > prevLocalChatsLength;
-
-    // Update previous lengths for next comparison
-    setPrevChatsLength(currentChatsLength);
-    setPrevLocalChatsLength(currentLocalChatsLength);
-
-    // Scroll if there are new messages
-    if (hasNewMessages && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [appState?.roomData?.chatHistory, localChats]);
 
   // Listen for new chat messages
@@ -70,7 +100,8 @@ const ChatBox = (props) => {
 
       // Check if this message is already in the server history
       const isInServerHistory = appState?.roomData?.chatHistory?.some(
-        chat => chat.message === message && chat.user.userName === sender
+        chat => chat.message === message &&
+          (chat.user.userName === sender || chat.user.name === sender)
       );
 
       if (!isInServerHistory) {
@@ -94,7 +125,8 @@ const ChatBox = (props) => {
     const updatedLocalChats = localChats.filter(localChat =>
       !appState.roomData.chatHistory.some(serverChat =>
         serverChat.message === localChat.message &&
-        serverChat.user.userName === localChat.sender
+        (serverChat.user.userName === localChat.sender ||
+          serverChat.user.name === localChat.sender)
       )
     );
 
@@ -105,6 +137,12 @@ const ChatBox = (props) => {
 
   // Handle sending messages
   const handleSendMessage = (e) => {
+    // Block sending if current user is the drawer or has already guessed correctly
+    if (isChatDisabled) {
+      e.target.value = "";
+      return;
+    }
+
     const message = e.target.value;
     if (!message.includes("\n")) return;
 
@@ -125,10 +163,10 @@ const ChatBox = (props) => {
   // Combine and sort all messages
   const allChats = [
     ...(appState?.roomData?.chatHistory || []).map(chat => ({
-      sender: chat.user.userName,
+      sender: chat.user.userName || chat.user.name,
       message: chat.message,
       rightGuess: chat.message.includes(" guessed the word!"),
-      timestamp: chat.timestamp || Date.now()
+      timestamp: new Date(chat.timestamp).getTime() || Date.now()
     })),
     ...localChats
   ].sort((a, b) => a.timestamp - b.timestamp);
@@ -146,7 +184,17 @@ const ChatBox = (props) => {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <textarea onChange={handleSendMessage} style={styles.textarea}></textarea>
+      <textarea
+        onChange={handleSendMessage}
+        style={styles.textarea}
+        placeholder={isChatDisabled
+          ? (isCurrentUserDrawer
+            ? "You're drawing! No chatting allowed."
+            : "You've guessed correctly!")
+          : "Type and press Enter to chat"
+        }
+        disabled={isChatDisabled}
+      ></textarea>
     </div>
   );
 };
