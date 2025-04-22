@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChatBox from "../components/ChatBox";
-// import Kicking from "../components/Kicking";
 
 const Lobby = ({ appState, setAppState }) => {
   const navigate = useNavigate();
@@ -79,75 +78,79 @@ const Lobby = ({ appState, setAppState }) => {
   const round = roomData?.round || 1;
 
   return (
-    <div>
-      <h1>Lobby</h1>
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          fontSize: "1.5rem",
-          fontWeight: "bold",
-          marginTop: "20px",
-          marginBottom: "20px",
-        }}
-      >
-        <p>Time: {timeLeft}</p>
-        <p>Round {round} of 3</p>
-      </div>
-      <h2>Code {roomCode} </h2>
-      <ul>
-        {roomData?.users?.map((user) => (
-          <li>
-            {userIsHost && user.socketId !== roomData.host.id && (
-              <button
-                onClick={() => handleKickPlayer(user)}
-                style={{
-                  backgroundColor: "#D3D3D3",
-                  marginRight: "8px",
-                  color: "black",
-                  border: "none",
-                  borderRadius: "12px",
-                  cursor: "pointer",
-                }}
-                title={`Kick ${user.userName}`}
-              >
-                kick
-              </button>
-            )}
-            <span>{user.userName} </span>
-          </li>
-        ))}
-      </ul>
-
-      <button
-        style={{
-          backgroundColor: "#f44336",
-          color: "white",
-          border: "none",
-          borderRadius: "12px",
-          padding: "15px 32px",
-          fontSize: "1.5rem",
-        }}
-        onClick={handleLeaveGame}
-      >
-        Leave Game
-      </button>
-
-      {userIsHost && (
-        <button
+    <div style={{ paddingRight: "320px" }}> {/* Add padding to make room for chat */}
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        <h1>Lobby</h1>
+        <div
           style={{
-            backgroundColor: "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "12px",
-            padding: "15px 32px",
+            display: "flex",
+            gap: "8px",
             fontSize: "1.5rem",
+            fontWeight: "bold",
+            marginTop: "20px",
+            marginBottom: "20px",
           }}
-          onClick={handleStartGame}
         >
-          Start Game
-        </button>
-      )}
+          <p>Time: {timeLeft}</p>
+          <p>Round {round} of 3</p>
+        </div>
+        <h2>Code {roomCode} </h2>
+        <ul>
+          {roomData?.users?.map((user, index) => (
+            <li key={index}>
+              {userIsHost && user.socketId !== roomData.host.id && (
+                <button
+                  onClick={() => handleKickPlayer(user)}
+                  style={{
+                    backgroundColor: "#D3D3D3",
+                    marginRight: "8px",
+                    color: "black",
+                    border: "none",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                  }}
+                  title={`Kick ${user.userName}`}
+                >
+                  kick
+                </button>
+              )}
+              <span>{user.userName} </span>
+            </li>
+          ))}
+        </ul>
+
+        <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+          <button
+            style={{
+              backgroundColor: "#f44336",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              padding: "15px 32px",
+              fontSize: "1.5rem",
+            }}
+            onClick={handleLeaveGame}
+          >
+            Leave Game
+          </button>
+
+          {userIsHost && (
+            <button
+              style={{
+                backgroundColor: "#4CAF50",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "15px 32px",
+                fontSize: "1.5rem",
+              }}
+              onClick={handleStartGame}
+            >
+              Start Game
+            </button>
+          )}
+        </div>
+      </div>
       <ChatBox appState={appState} setAppState={setAppState} />
     </div>
   );
