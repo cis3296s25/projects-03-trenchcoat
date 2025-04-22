@@ -5,6 +5,7 @@ const ChatBox = (props) => {
   const { socket, userName } = appState;
   const messagesEndRef = useRef(null);
   const [localChats, setLocalChats] = useState([]);
+  const prevMessageCountRef = useRef(0);
 
   // Determine if current user is the drawer or has already guessed correctly
   const isCurrentUserDrawer = React.useMemo(() => {
@@ -38,8 +39,6 @@ const ChatBox = (props) => {
 
   // Determine if the chat should be disabled for the current user
   const isChatDisabled = isCurrentUserDrawer || hasGuessedCorrectly;
-
-  
 
   const styles = {
     container: {
@@ -85,10 +84,27 @@ const ChatBox = (props) => {
     }
   };
 
-  // Auto-scroll to bottom when messages change
+  // Combine and sort all messages
+  const allChats = [
+    ...(appState?.roomData?.chatHistory || []).map(chat => ({
+      sender: chat.user.userName || chat.user.name,
+      message: chat.message,
+      rightGuess: chat.message.includes(" guessed the word!"),
+      timestamp: new Date(chat.timestamp).getTime() || Date.now()
+    })),
+    ...localChats
+  ].sort((a, b) => a.timestamp - b.timestamp);
+
+  // Auto-scroll when the message count changes
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [appState?.roomData?.chatHistory, localChats]);
+    const currentMessageCount = allChats.length;
+
+    if (currentMessageCount > prevMessageCountRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+
+    prevMessageCountRef.current = currentMessageCount;
+  }, [allChats.length]);
 
   // Listen for new chat messages
   useEffect(() => {
@@ -159,17 +175,6 @@ const ChatBox = (props) => {
       userName,
     });
   };
-
-  // Combine and sort all messages
-  const allChats = [
-    ...(appState?.roomData?.chatHistory || []).map(chat => ({
-      sender: chat.user.userName || chat.user.name,
-      message: chat.message,
-      rightGuess: chat.message.includes(" guessed the word!"),
-      timestamp: new Date(chat.timestamp).getTime() || Date.now()
-    })),
-    ...localChats
-  ].sort((a, b) => a.timestamp - b.timestamp);
 
   return (
     <div style={styles.container}>
