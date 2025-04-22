@@ -32,7 +32,7 @@ const Lobby = ({ appState, setAppState }) => {
 
     // Redirect to the join page if the room data is not available
     if (!roomData) {
-      navigate(`/join/${roomCode}`);
+      navigate(`/`);
     }
   }, [roomData, navigate, roomCode]);
 
@@ -51,6 +51,8 @@ const Lobby = ({ appState, setAppState }) => {
   const handleLeaveGame = () => {
     if (socket) {
       appState.socket.emit("leaveRoom", { inputCode: roomCode });
+      setAppState((prev) => ({ ...prev, roomData: null }));
+      navigate("/");
     }
   };
 

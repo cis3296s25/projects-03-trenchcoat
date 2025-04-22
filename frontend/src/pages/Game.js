@@ -10,7 +10,7 @@ function Game({ appState, setAppState }) {
     if (appState.socket && appState?.roomData?.code) {
       appState.socket.emit("leaveRoom", { inputCode: appState.roomData.code });
       setAppState((prev) => ({ ...prev, roomData: null }));
-      navigate(`/join/${roomCode}`);
+      navigate(`/`);
     }
   };
 

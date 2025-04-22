@@ -40,7 +40,7 @@ const ChatBox = (props) => {
     }
   };
 
-  // Auto-scroll only when new messages arrive
+  // Auto-scroll when new messages arrive
   useEffect(() => {
     const currentChatsLength = appState?.roomData?.chatHistory?.length || 0;
     const currentLocalChatsLength = localChats.length;
@@ -54,7 +54,7 @@ const ChatBox = (props) => {
     setPrevChatsLength(currentChatsLength);
     setPrevLocalChatsLength(currentLocalChatsLength);
 
-    // Only scroll if there are new messages
+    // Scroll if there are new messages
     if (hasNewMessages && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
