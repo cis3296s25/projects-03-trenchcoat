@@ -99,7 +99,8 @@ function handleTurnEnd(io, roomCode, clearInterval) {
   if (!room) {
     return null;
   }
-
+  io.to(roomCode).emit("clearCanvas");
+  room.strokes = [];
   console.log(room, "dummy");
   const isLastRound = room.round === room.maxRounds;
 

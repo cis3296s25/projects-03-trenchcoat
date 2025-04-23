@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 function DrawingCanvas(props) {
@@ -12,7 +12,7 @@ function DrawingCanvas(props) {
   const [brushSize, setBrushSize] = useState(2);
   const [paths, setPaths] = useState([]); // Store local paths for undo
   const currentPath = useRef([]); // Temporary store for active drawing stroke
-
+  
   useEffect(() => {
     if (!socket) return;
 
@@ -26,45 +26,46 @@ function DrawingCanvas(props) {
       };
     };
 
-    const startDrawing = (e) => {
-      isDrawing.current = true;
-      const { x, y } = getPos(e);
-      const strokeId = uuidv4();
-      currentPath.current = [
-        { x, y, color: brushColor, size: brushSize, id: strokeId },
-      ];
-      socket.emit("startDrawing", gameCode, { x, y });
-    };
+      const startDrawing = (e) => {
+        if (!isCurrentUserDrawer) return;
+        isDrawing.current = true;
+        const { x, y } = getPos(e);
+        const strokeId = uuidv4();
+        currentPath.current = [
+          { x, y, color: brushColor, size: brushSize, id: strokeId },
+        ];
+        socket.emit("startDrawing", gameCode, { x, y });
+      };
 
-    const endDrawing = () => {
-      if (isDrawing.current && currentPath.current.length > 0) {
-        const stroke = [...currentPath.current];
-        setPaths((prev) => [...prev, stroke]);
-        socket.emit("strokeDone", gameCode, stroke);
-      }
-      isDrawing.current = false;
-      socket.emit("endDrawing", gameCode);
-    };
+      const endDrawing = () => {
+        if (isDrawing.current && currentPath.current.length > 0) {
+          const stroke = [...currentPath.current];
+          setPaths((prev) => [...prev, stroke]);
+          socket.emit("strokeDone", gameCode, stroke);
+        }
+        isDrawing.current = false;
+        socket.emit("endDrawing", gameCode);
+      };
 
-    const draw = (e) => {
-      if (!isDrawing.current) return;
-      const { x, y } = getPos(e);
-      const point = { x, y, color: brushColor, size: brushSize };
-      currentPath.current.push(point);
-      socket.emit("drawing", gameCode, point);
-    };
+      const draw = (e) => {
+        if (!isDrawing.current) return;
+        const { x, y } = getPos(e);
+        const point = { x, y, color: brushColor, size: brushSize };
+        currentPath.current.push(point);
+        socket.emit("drawing", gameCode, point);
+      };
 
-    canvas.addEventListener("mousedown", startDrawing);
-    canvas.addEventListener("mouseup", endDrawing);
-    canvas.addEventListener("mouseout", endDrawing);
-    canvas.addEventListener("mousemove", draw);
+      canvas.addEventListener("mousedown", startDrawing);
+      canvas.addEventListener("mouseup", endDrawing);
+      canvas.addEventListener("mouseout", endDrawing);
+      canvas.addEventListener("mousemove", draw);
 
-    return () => {
-      canvas.removeEventListener("mousedown", startDrawing);
-      canvas.removeEventListener("mouseup", endDrawing);
-      canvas.removeEventListener("mouseout", endDrawing);
-      canvas.removeEventListener("mousemove", draw);
-    };
+      return () => {
+        canvas.removeEventListener("mousedown", startDrawing);
+        canvas.removeEventListener("mouseup", endDrawing);
+        canvas.removeEventListener("mouseout", endDrawing);
+        canvas.removeEventListener("mousemove", draw);
+      };
   }, [socket, gameCode, brushColor, brushSize]);
 
   useEffect(() => {
@@ -180,6 +181,21 @@ function DrawingCanvas(props) {
     };
   }, [socket, gameCode]);
 
+  const isCurrentUserDrawer = React.useMemo(() => {
+    if (!appState?.roomData?.gameStarted || !socket) return false;
+
+    const currentDrawerIndex = appState.roomData.currentDrawerIndex;
+    const currentDrawer = appState.roomData.users[currentDrawerIndex];
+
+    // The socketId property is used in some places, id in others
+    return (currentDrawer?.socketId === socket.id) || (currentDrawer?.id === socket.id);
+  }, [appState?.roomData, socket]);
+
+  useEffect(() => {
+    isDrawing.current = false;
+    currentPath.current = [];
+  }, [isCurrentUserDrawer]);
+
   return (
     <div
       style={{
@@ -189,17 +205,21 @@ function DrawingCanvas(props) {
         padding: "1rem",
       }}
     >
+      {isCurrentUserDrawer && (
+        <>
       <div style={{ marginBottom: "1rem" }}>
-        <label style={{ marginRight: "1rem" }}>
+        <label style={{ marginRight: "1rem" }} hidden={!isCurrentUserDrawer}>
           Pen Color:
           <input
             type="color"
             value={brushColor}
             onChange={(e) => setBrushColor(e.target.value)}
             style={{ marginLeft: "0.5rem" }}
+            hidden={!isCurrentUserDrawer}
+            disable={!isCurrentUserDrawer}
           />
         </label>
-        <label>
+        <label hidden={!isCurrentUserDrawer}>
           Pen Size:
           <input
             type="range"
@@ -208,16 +228,24 @@ function DrawingCanvas(props) {
             value={brushSize}
             onChange={(e) => setBrushSize(parseInt(e.target.value))}
             style={{ marginLeft: "0.5rem" }}
+            hidden={!isCurrentUserDrawer}
+            disable={!isCurrentUserDrawer}
           />
           <span style={{ marginLeft: "0.5rem" }}>{brushSize}px</span>
         </label>
       </div>
       <div style={{ marginBottom: "1rem" }}>
-        <button onClick={handleUndo} style={{ marginRight: "1rem" }}>
+        <button onClick={handleUndo} style={{ marginRight: "1rem" }} hidden={!isCurrentUserDrawer}>
           Undo
         </button>
-        <button onClick={handleClear}>Clear</button>
+        <button onClick={handleClear} 
+        hidden={!isCurrentUserDrawer}
+        disable={!isCurrentUserDrawer}>
+          Clear
+        </button>
       </div>
+      </>
+)}
       <canvas
         ref={canvasRef}
         width={800}
