@@ -1,6 +1,13 @@
 const roomService = require("./roomService");
 
 module.exports = function (io) {
+  const validateDrawer = (socket, roomCode) => {
+    const room = roomService.getRoomByCode(roomCode);
+    if (!room) return false;
+    
+    const currentDrawer = room.users[room.currentDrawerIndex];
+    return (currentDrawer?.socketId === socket.id) || (currentDrawer?.id === socket.id);
+  };
   io.on("connection", (socket) => {
     console.log("User connected with socket ID:", socket.id);
 
@@ -55,7 +62,7 @@ module.exports = function (io) {
 
           if (currentRoom?.timeLeft > 0) {
             currentRoom.timeLeft -= 1;
-            io.to(roomCode).emit("roomDataUpdated", roomCode, currentRoom);
+            io.to(roomCode).emit("roomDataUpdated", roomCode, {...currentRoom, currentDrawerIndex: currentRoom.currentDrawerIndex});
           } else {
             roomService.handleTurnEnd(io, roomCode, () => {
               clearInterval(interval);
@@ -132,18 +139,22 @@ module.exports = function (io) {
 
     // Drawing events
     socket.on("startDrawing", (code, data) => {
+      if (!validateDrawer(socket, code)) return;
       io.to(code).emit("startDrawing", data);
     });
 
     socket.on("drawing", (code, data) => {
+      if (!validateDrawer(socket, code)) return;
       io.to(code).emit("drawing", data);
     });
 
     socket.on("endDrawing", (code) => {
+      if (!validateDrawer(socket, code)) return;
       io.to(code).emit("endDrawing");
     });
 
     socket.on("strokeDone", (code, stroke) => {
+      if (!validateDrawer(socket, code)) return;
       const room = roomService.getRoomByCode(code);
       if (room) {
         // Save the stroke to the room data
@@ -153,6 +164,7 @@ module.exports = function (io) {
     });
 
     socket.on("undoLastStroke", (code) => { 
+      if (!validateDrawer(socket, code)) return;
       const room = roomService.getRoomByCode(code);
       if (room && room.strokes.length > 0) {
         // Remove the last stroke from the room data
@@ -163,6 +175,7 @@ module.exports = function (io) {
     });
 
     socket.on("clearCanvas", (code) => { 
+      if (!validateDrawer(socket, code)) return;
       const room = roomService.getRoomByCode(code);
       if (room) {
         // Clear all strokes in the room data
