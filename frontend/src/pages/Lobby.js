@@ -15,7 +15,7 @@ const Lobby = ({ appState, setAppState }) => {
   const handleStartGame = () => {
     if (socket && roomData) {
       console.log("Starting game with room data:", roomData);
-      socket.emit("updateRoomData", roomCode, {
+      socket?.emit("updateRoomData", roomCode, {
         ...roomData,
         gameStarted: true,
         round: 1,
@@ -41,16 +41,16 @@ const Lobby = ({ appState, setAppState }) => {
       navigate("/");
       window.location.reload();
     };
-    socket.on("youWereKicked", handleKick);
+    socket?.on("youWereKicked", handleKick);
     return () => {
-      socket.off("youWereKicked", handleKick);
+      socket?.off("youWereKicked", handleKick);
     };
   }, [navigate, socket]);
 
   // Function to handle the leave game button click
   const handleLeaveGame = () => {
     if (socket) {
-      appState.socket.emit("leaveRoom", { inputCode: roomCode });
+      appState?.socket?.emit("leaveRoom", { inputCode: roomCode });
       setAppState((prev) => ({ ...prev, roomData: null }));
       navigate("/");
     }
@@ -59,7 +59,7 @@ const Lobby = ({ appState, setAppState }) => {
   const handleKickPlayer = async (user) => {
     if (window.confirm(`Kick ${user.userName}?`)) {
       console.log("Attempting to kick", user);
-      socket.emit(
+      socket?.emit(
         "kickPlayer",
         {
           roomCode,
@@ -80,7 +80,9 @@ const Lobby = ({ appState, setAppState }) => {
   const round = roomData?.round || 1;
 
   return (
-    <div style={{ paddingRight: "320px" }}> {/* Add padding to make room for chat */}
+    <div style={{ paddingRight: "320px" }}>
+      {" "}
+      {/* Add padding to make room for chat */}
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         <h1>Lobby</h1>
         <div

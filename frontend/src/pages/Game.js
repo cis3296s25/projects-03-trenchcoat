@@ -29,7 +29,9 @@ function Game({ appState, setAppState }) {
     appState?.roomData?.users[appState?.roomData?.currentDrawerIndex]?.userName;
 
   return (
-    <div style={{ paddingRight: "320px" }}> {/* Add padding to make room for chat */}
+    <div style={{ paddingRight: "320px" }}>
+      {" "}
+      {/* Add padding to make room for chat */}
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         {socket ? (
           <DrawingCanvas appState={appState} setAppState={setAppState} />
@@ -48,7 +50,13 @@ function Game({ appState, setAppState }) {
         >
           Random Word: {appState?.roomData?.randomWord}
         </h1>
-        <div style={{ display: "flex", justifyContent: "space-between", margin: "1rem 0" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            margin: "1rem 0",
+          }}
+        >
           <p>Time: {appState?.roomData?.timeLeft || 0}</p>
           <p>Round {appState?.roomData?.round || 1} of 3</p>
           <p>Currently Drawing: {currentDrawer}</p>
