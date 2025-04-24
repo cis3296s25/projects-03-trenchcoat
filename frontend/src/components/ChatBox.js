@@ -39,6 +39,7 @@ const ChatBox = (props) => {
   );
 
   // Debugging
+/*
   useEffect(() => {
     if (appState?.roomData?.gameStarted) {
       console.log(
@@ -50,12 +51,10 @@ const ChatBox = (props) => {
       console.log("Have I guessed correctly? ", hasGuessedCorrectly);
       console.log("Correct guessers: ", appState.roomData.correctGuessers);
     }
-  }, [appState?.roomData, socket, isCurrentUserDrawer, hasGuessedCorrectly]);
+  }, [appState?.roomData, socket, isCurrentUserDrawer, hasGuessedCorrectly]);*/
 
   // Determine if the chat should be disabled for the current user
   const isChatDisabled = isCurrentUserDrawer || hasGuessedCorrectly;
-
-  console.log(hasGuessedCorrectly, "heeeeeeeeeeeeeeeeeeeeee");
 
   React.useEffect(() => {
     if (correctGuessAudio.current && !audioPlayed && hasGuessedCorrectly) {
