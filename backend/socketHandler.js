@@ -241,6 +241,11 @@ module.exports = function (io) {
 
         room.correctGuessers.push(user);
 
+        socket.emit("wordRevealed", {
+          rawWord: room.randomWord,
+          formattedWord: room.randomWord.split('').map(c => c === ' ' ? '  ' : '_').join(' '),
+          letterCount: room.randomWord.replace(/\s/g, '').length
+        });
         // Send success message
         const correctGuessMsg = `${userName} guessed the word!`;
 
