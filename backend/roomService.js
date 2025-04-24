@@ -16,7 +16,6 @@ function createGameRoom(userName, socketId) {
   //correct guessers for round
   rooms[roomCode].correctGuessers = [];
 
-
   return {
     roomCode,
     roomData: rooms[roomCode],
@@ -75,7 +74,9 @@ function removeUserFromRoom(roomCode, userId) {
 
 function sendChatMessage(roomCode, user, message) {
   const room = getRoomByCode(roomCode);
-  
+
+  console.log({ room }, "nexted room");
+
   if (!rooms[roomCode]) {
     return null;
   }
@@ -83,9 +84,11 @@ function sendChatMessage(roomCode, user, message) {
   const currentWord = room.randomWord?.toLowerCase();
   const enteredMessage = message.trim().toLowerCase();
 
-  console.log(`Checking guess: "${enteredMessage}" against the word: "${currentWord}"`);
+  console.log(
+    `Checking guess: "${enteredMessage}" against the word: "${currentWord}"`
+  );
   const rightGuess = enteredMessage === currentWord;
-  
+
   if (rightGuess) {
     return room;
   }
@@ -101,7 +104,7 @@ function handleTurnEnd(io, roomCode, clearInterval) {
   }
   io.to(roomCode).emit("clearCanvas");
   room.strokes = [];
-  console.log(room, "dummy");
+
   const isLastRound = room.round === room.maxRounds;
 
   // Check if current drawer is last user in the list
@@ -131,27 +134,31 @@ function handleTurnEnd(io, roomCode, clearInterval) {
 
   room.timeLeft = room.maxTime;
   room.randomWord = randomWords(1)[0];
-  room.correctGuessers = []; // correct guessers reset for each new turn
+
+  setTimeout(() => {
+    rooms[roomCode].correctGuessers = []; // correct guessers reset for each new turn
+    io.to(roomCode).emit("roomDataUpdated", roomCode, room);
+  }, 2000);
 
   io.to(roomCode).emit("roomDataUpdated", roomCode, room);
 }
 
 function clearRoomChat(roomCode) {
-    if (!rooms[roomCode]) {
-        return null;
-    }
+  if (!rooms[roomCode]) {
+    return null;
+  }
 
-    clearChatHistory(rooms[roomCode]);
-    return rooms[roomCode];
+  clearChatHistory(rooms[roomCode]);
+  return rooms[roomCode];
 }
 
 module.exports = {
-    createGameRoom,
-    getRoomByCode,
-    updateRoomData,
-    addUserToRoom,
-    removeUserFromRoom,
-    sendChatMessage,
-    clearRoomChat,
-    handleTurnEnd
+  createGameRoom,
+  getRoomByCode,
+  updateRoomData,
+  addUserToRoom,
+  removeUserFromRoom,
+  sendChatMessage,
+  clearRoomChat,
+  handleTurnEnd,
 };

@@ -6,6 +6,8 @@ const ChatBox = (props) => {
   const messagesEndRef = useRef(null);
   const [localChats, setLocalChats] = useState([]);
   const prevMessageCountRef = useRef(0);
+  const correctGuessAudio = useRef(null);
+  const [audioPlayed, setAudioPlayed] = useState(false);
 
   // Determine if current user is the drawer or has already guessed correctly
   const isCurrentUserDrawer = React.useMemo(() => {
@@ -15,21 +17,34 @@ const ChatBox = (props) => {
     const currentDrawer = appState.roomData.users[currentDrawerIndex];
 
     // The socketId property is used in some places, id in others
-    return (currentDrawer?.socketId === socket.id) || (currentDrawer?.id === socket.id);
+    return (
+      currentDrawer?.socketId === socket.id || currentDrawer?.id === socket.id
+    );
   }, [appState?.roomData, socket]);
 
   // Check if current user has already guessed correctly in this round
-  const hasGuessedCorrectly = React.useMemo(() => {
-    if (!appState?.roomData?.gameStarted || !socket || !appState?.roomData?.correctGuessers) return false;
+  const hasGuessedCorrectly =
+    !appState?.roomData?.gameStarted ||
+    !socket ||
+    !appState?.roomData?.correctGuessers
+      ? false
+      : // Check if user's socket ID is in the correctGuessers array
+        appState.roomData.correctGuessers.find((u) => u.id === socket.id);
 
-    // Check if user's socket ID is in the correctGuessers array
-    return appState.roomData.correctGuessers.includes(socket.id);
-  }, [appState?.roomData, socket]);
+  console.log(
+    socket?.id,
+    "hi i am the socket",
+    appState?.roomData?.correctGuessers,
+    hasGuessedCorrectly
+  );
 
   // Debugging
   useEffect(() => {
     if (appState?.roomData?.gameStarted) {
-      console.log("Current drawer: ", appState.roomData.users[appState.roomData.currentDrawerIndex]);
+      console.log(
+        "Current drawer: ",
+        appState.roomData.users[appState.roomData.currentDrawerIndex]
+      );
       console.log("My socket ID: ", socket?.id);
       console.log("Am I the drawer? ", isCurrentUserDrawer);
       console.log("Have I guessed correctly? ", hasGuessedCorrectly);
@@ -39,6 +54,15 @@ const ChatBox = (props) => {
 
   // Determine if the chat should be disabled for the current user
   const isChatDisabled = isCurrentUserDrawer || hasGuessedCorrectly;
+
+  console.log(hasGuessedCorrectly, "heeeeeeeeeeeeeeeeeeeeee");
+
+  React.useEffect(() => {
+    if (correctGuessAudio.current && !audioPlayed && hasGuessedCorrectly) {
+      correctGuessAudio.current.volume = 0.05;
+      correctGuessAudio.current.play();
+    }
+  }, [correctGuessAudio, hasGuessedCorrectly, audioPlayed]);
 
   const styles = {
     container: {
@@ -53,14 +77,14 @@ const ChatBox = (props) => {
       bottom: 0,
       boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
       display: "flex",
-      flexDirection: "column"
+      flexDirection: "column",
     },
     messagesContainer: {
       overflowY: "auto",
       flexGrow: 1,
       marginBottom: "110px",
       display: "flex",
-      flexDirection: "column"
+      flexDirection: "column",
     },
     textarea: {
       position: "absolute",
@@ -81,18 +105,18 @@ const ChatBox = (props) => {
       color: "#666",
       fontSize: "12px",
       fontStyle: "italic",
-    }
+    },
   };
 
   // Combine and sort all messages
   const allChats = [
-    ...(appState?.roomData?.chatHistory || []).map(chat => ({
+    ...(appState?.roomData?.chatHistory || []).map((chat) => ({
       sender: chat.user.userName || chat.user.name,
       message: chat.message,
       rightGuess: chat.message.includes(" guessed the word!"),
-      timestamp: new Date(chat.timestamp).getTime() || Date.now()
+      timestamp: new Date(chat.timestamp).getTime() || Date.now(),
     })),
-    ...localChats
+    ...localChats,
   ].sort((a, b) => a.timestamp - b.timestamp);
 
   // Auto-scroll when the message count changes
@@ -116,17 +140,21 @@ const ChatBox = (props) => {
 
       // Check if this message is already in the server history
       const isInServerHistory = appState?.roomData?.chatHistory?.some(
-        chat => chat.message === message &&
+        (chat) =>
+          chat.message === message &&
           (chat.user.userName === sender || chat.user.name === sender)
       );
 
       if (!isInServerHistory) {
-        setLocalChats(prev => [...prev, {
-          sender,
-          message,
-          rightGuess,
-          timestamp: Date.now()
-        }]);
+        setLocalChats((prev) => [
+          ...prev,
+          {
+            sender,
+            message,
+            rightGuess,
+            timestamp: Date.now(),
+          },
+        ]);
       }
     };
 
@@ -138,12 +166,14 @@ const ChatBox = (props) => {
   useEffect(() => {
     if (!appState?.roomData?.chatHistory || localChats.length === 0) return;
 
-    const updatedLocalChats = localChats.filter(localChat =>
-      !appState.roomData.chatHistory.some(serverChat =>
-        serverChat.message === localChat.message &&
-        (serverChat.user.userName === localChat.sender ||
-          serverChat.user.name === localChat.sender)
-      )
+    const updatedLocalChats = localChats.filter(
+      (localChat) =>
+        !appState.roomData.chatHistory.some(
+          (serverChat) =>
+            serverChat.message === localChat.message &&
+            (serverChat.user.userName === localChat.sender ||
+              serverChat.user.name === localChat.sender)
+        )
     );
 
     if (updatedLocalChats.length !== localChats.length) {
@@ -182,7 +212,9 @@ const ChatBox = (props) => {
         {allChats.map((chat, index) => (
           <div
             key={`chat-${index}`}
-            style={chat.rightGuess ? { color: 'green', fontWeight: 'bold' } : {}}
+            style={
+              chat.rightGuess ? { color: "green", fontWeight: "bold" } : {}
+            }
           >
             <strong>{chat.sender}</strong>: {chat.message}
           </div>
@@ -192,14 +224,22 @@ const ChatBox = (props) => {
       <textarea
         onChange={handleSendMessage}
         style={styles.textarea}
-        placeholder={isChatDisabled
-          ? (isCurrentUserDrawer
-            ? "You're drawing! No chatting allowed."
-            : "You've guessed correctly!")
-          : "Type and press Enter to chat"
+        placeholder={
+          isChatDisabled
+            ? isCurrentUserDrawer
+              ? "You're drawing! No chatting allowed."
+              : "You've guessed correctly!"
+            : "Type and press Enter to chat"
         }
         disabled={isChatDisabled}
       ></textarea>
+      <audio ref={correctGuessAudio}>
+        <source
+          src="/correct-guess.mp3"
+          type="audio/mpeg"
+          ref={correctGuessAudio}
+        />
+      </audio>
     </div>
   );
 };

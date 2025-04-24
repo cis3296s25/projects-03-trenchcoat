@@ -1,12 +1,16 @@
 const roomService = require("./roomService");
 
+const intervals = {};
+
 module.exports = function (io) {
   const validateDrawer = (socket, roomCode) => {
     const room = roomService.getRoomByCode(roomCode);
     if (!room) return false;
-    
+
     const currentDrawer = room.users[room.currentDrawerIndex];
-    return (currentDrawer?.socketId === socket.id) || (currentDrawer?.id === socket.id);
+    return (
+      currentDrawer?.socketId === socket.id || currentDrawer?.id === socket.id
+    );
   };
   io.on("connection", (socket) => {
     console.log("User connected with socket ID:", socket.id);
@@ -42,11 +46,11 @@ module.exports = function (io) {
         return;
       }
 
-      // Check if the game is starting 
+      // Check if the game is starting
       if (roomData.gameStarted && !room.gameStarted) {
-          console.log("Game is starting - clearing chat history");
-          roomService.clearRoomChat(roomCode);
-          roomData.chatHistory = [];
+        console.log("Game is starting - clearing chat history");
+        roomService.clearRoomChat(roomCode);
+        roomData.chatHistory = [];
       }
 
       // Check if the game is starting with timer
@@ -61,14 +65,21 @@ module.exports = function (io) {
           }
 
           if (currentRoom?.timeLeft > 0) {
+            // updating the time left in the room data (decrementing by 1 second)
             currentRoom.timeLeft -= 1;
-            io.to(roomCode).emit("roomDataUpdated", roomCode, {...currentRoom, currentDrawerIndex: currentRoom.currentDrawerIndex});
+            io.to(roomCode).emit("roomDataUpdated", roomCode, {
+              ...currentRoom,
+              currentDrawerIndex: currentRoom.currentDrawerIndex,
+            });
           } else {
+            // Time's up, handle turn end
             roomService.handleTurnEnd(io, roomCode, () => {
               clearInterval(interval);
             });
           }
         }, 1000);
+
+        intervals[roomCode] = interval; // Store the interval ID for later clearing
       }
 
       const updatedRoom = roomService.updateRoomData(roomCode, roomData);
@@ -163,7 +174,7 @@ module.exports = function (io) {
       io.to(code).emit("strokeDone", stroke);
     });
 
-    socket.on("undoLastStroke", (code) => { 
+    socket.on("undoLastStroke", (code) => {
       if (!validateDrawer(socket, code)) return;
       const room = roomService.getRoomByCode(code);
       if (room && room.strokes.length > 0) {
@@ -174,7 +185,7 @@ module.exports = function (io) {
       io.to(code).emit("undoLastStroke");
     });
 
-    socket.on("clearCanvas", (code) => { 
+    socket.on("clearCanvas", (code) => {
       if (!validateDrawer(socket, code)) return;
       const room = roomService.getRoomByCode(code);
       if (room) {
@@ -206,10 +217,13 @@ module.exports = function (io) {
 
       const randomWord = room.randomWord?.toLowerCase();
       const cleanedMessage = message.trim().toLowerCase();
-      const isCorrectGuess = cleanedMessage === (randomWord);
+      const isCorrectGuess = cleanedMessage === randomWord;
 
       // For correct guesses
-      if (isCorrectGuess && !room.correctGuessers.includes(user.id)) {
+      if (
+        isCorrectGuess &&
+        !room.correctGuessers.find((u) => u.id === user.id)
+      ) {
         const drawer = room.users[room.currentDrawerIndex];
 
         // Award points to guesser based on time
@@ -225,14 +239,18 @@ module.exports = function (io) {
         }
         drawer.score = (drawer.score || 0) + drawerPoints;
 
-        room.correctGuessers.push(user.id);
+        room.correctGuessers.push(user);
 
         // Send success message
         const correctGuessMsg = `${userName} guessed the word!`;
 
-        // Store the correct guess notification in the chat history 
+        // Store the correct guess notification in the chat history
         // instead of the original message
-        const updatedRoom = roomService.sendChatMessage(gameCode, user, correctGuessMsg);
+        const updatedRoom = roomService.sendChatMessage(
+          gameCode,
+          user,
+          correctGuessMsg
+        );
 
         // Emit the chat notification
         io.to(gameCode).emit("receive-chat", {
@@ -240,15 +258,29 @@ module.exports = function (io) {
           player: user,
           rightGuess: true,
           players: room.users,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
 
         // Update room data with the correct guess message in chat history
         io.to(gameCode).emit("roomDataUpdated", gameCode, updatedRoom);
+
+        if (room.correctGuessers.length === room.users.length - 1) {
+          const intervalId = intervals[gameCode];
+          if (intervalId) {
+            roomService.handleTurnEnd(io, gameCode, () => {
+              clearInterval(intervalId); // Clear the interval for this room
+              delete intervals[gameCode]; // Remove the interval from the store
+            });
+          }
+        }
       } else {
         // Regular message (not a correct guess)
         // Store the original message
-        const updatedRoom = roomService.sendChatMessage(gameCode, user, message);
+        const updatedRoom = roomService.sendChatMessage(
+          gameCode,
+          user,
+          message
+        );
 
         // Emit the chat message
         io.to(gameCode).emit("receive-chat", {
@@ -256,7 +288,7 @@ module.exports = function (io) {
           player: user,
           rightGuess: false,
           players: room.users,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
 
         // Update room data with the message in chat history

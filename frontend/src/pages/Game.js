@@ -6,6 +6,7 @@ import ChatBox from "../components/ChatBox";
 function Game({ appState, setAppState }) {
   const navigate = useNavigate();
   const { roomCode } = useParams();
+  const audioRef = React.useRef(null);
   const handleGoBack = () => {
     if (appState.socket && appState?.roomData?.code) {
       appState.socket.emit("leaveRoom", { inputCode: appState.roomData.code });
@@ -15,7 +16,6 @@ function Game({ appState, setAppState }) {
   };
 
   React.useEffect(() => {
-    console.log(appState);
     if (!appState?.roomData) {
       navigate(`/join/${roomCode}`);
     } else if (appState?.roomData && appState.roomData.gameStarted === false) {
@@ -28,8 +28,16 @@ function Game({ appState, setAppState }) {
   const currentDrawer =
     appState?.roomData?.users[appState?.roomData?.currentDrawerIndex]?.userName;
 
+  // plays background music
+  React.useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.05;
+    }
+  }, [audioRef]);
+
   return (
-    <div style={{ paddingRight: "320px" }}> {/* Add padding to make room for chat */}
+    <div style={{ paddingRight: "320px" }}>
+      {/* Add padding to make room for chat */}
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         {socket ? (
           <DrawingCanvas appState={appState} setAppState={setAppState} />
@@ -48,7 +56,13 @@ function Game({ appState, setAppState }) {
         >
           Random Word: {appState?.roomData?.randomWord}
         </h1>
-        <div style={{ display: "flex", justifyContent: "space-between", margin: "1rem 0" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            margin: "1rem 0",
+          }}
+        >
           <p>Time: {appState?.roomData?.timeLeft || 0}</p>
           <p>Round {appState?.roomData?.round || 1} of 3</p>
           <p>Currently Drawing: {currentDrawer}</p>
@@ -78,6 +92,9 @@ function Game({ appState, setAppState }) {
         </button>
       </div>
       <ChatBox appState={appState} setAppState={setAppState} />
+      <audio ref={audioRef} autoPlay loop>
+        <source src="/bg-music.mp3" type="audio/mpeg" />
+      </audio>
     </div>
   );
 }

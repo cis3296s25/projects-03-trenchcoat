@@ -15,7 +15,7 @@ const Lobby = ({ appState, setAppState }) => {
   const handleStartGame = () => {
     if (socket && roomData) {
       console.log("Starting game with room data:", roomData);
-      socket.emit("updateRoomData", roomCode, {
+      socket?.emit("updateRoomData", roomCode, {
         ...roomData,
         gameStarted: true,
         round: 1,
@@ -41,16 +41,16 @@ const Lobby = ({ appState, setAppState }) => {
       navigate("/");
       window.location.reload();
     };
-    socket.on("youWereKicked", handleKick);
+    socket?.on("youWereKicked", handleKick);
     return () => {
-      socket.off("youWereKicked", handleKick);
+      socket?.off("youWereKicked", handleKick);
     };
   }, [navigate, socket]);
 
   // Function to handle the leave game button click
   const handleLeaveGame = () => {
     if (socket) {
-      appState.socket.emit("leaveRoom", { inputCode: roomCode });
+      appState?.socket?.emit("leaveRoom", { inputCode: roomCode });
       setAppState((prev) => ({ ...prev, roomData: null }));
       navigate("/");
     }
@@ -59,7 +59,7 @@ const Lobby = ({ appState, setAppState }) => {
   const handleKickPlayer = async (user) => {
     if (window.confirm(`Kick ${user.userName}?`)) {
       console.log("Attempting to kick", user);
-      socket.emit(
+      socket?.emit(
         "kickPlayer",
         {
           roomCode,
@@ -80,7 +80,9 @@ const Lobby = ({ appState, setAppState }) => {
   const round = roomData?.round || 1;
 
   return (
-    <div style={{ paddingRight: "320px" }}> {/* Add padding to make room for chat */}
+    <div style={{ paddingRight: "320px" }}>
+      {" "}
+      {/* Add padding to make room for chat */}
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
         <h1>Lobby</h1>
         <div
@@ -98,27 +100,33 @@ const Lobby = ({ appState, setAppState }) => {
         </div>
         <h2>Code {roomCode} </h2>
         <ul>
-          {roomData?.users?.map((user, index) => (
-            <li key={index}>
-              {userIsHost && user.socketId !== roomData.host.id && (
-                <button
-                  onClick={() => handleKickPlayer(user)}
-                  style={{
-                    backgroundColor: "#D3D3D3",
-                    marginRight: "8px",
-                    color: "black",
-                    border: "none",
-                    borderRadius: "12px",
-                    cursor: "pointer",
-                  }}
-                  title={`Kick ${user.userName}`}
-                >
-                  kick
-                </button>
-              )}
-              <span>{user.userName} </span>
-            </li>
-          ))}
+          {roomData?.users
+            ?.sort((a, b) => {
+              return a?.score < b?.score ? 1 : -1;
+            })
+            .map((user, index) => (
+              <li key={index}>
+                {userIsHost && user.socketId !== roomData.host.id && (
+                  <button
+                    onClick={() => handleKickPlayer(user)}
+                    style={{
+                      backgroundColor: "#D3D3D3",
+                      marginRight: "8px",
+                      color: "black",
+                      border: "none",
+                      borderRadius: "12px",
+                      cursor: "pointer",
+                    }}
+                    title={`Kick ${user.userName}`}
+                  >
+                    kick
+                  </button>
+                )}
+                <span>
+                  {`${user.userName}${user.score ? ` - ${user.score}` : ""}`}
+                </span>
+              </li>
+            ))}
         </ul>
 
         <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
