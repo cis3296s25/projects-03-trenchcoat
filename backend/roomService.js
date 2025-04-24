@@ -75,6 +75,8 @@ function removeUserFromRoom(roomCode, userId) {
 function sendChatMessage(roomCode, user, message) {
   const room = getRoomByCode(roomCode);
 
+  console.log({ room }, "nexted room");
+
   if (!rooms[roomCode]) {
     return null;
   }
@@ -131,7 +133,11 @@ function handleTurnEnd(io, roomCode, clearInterval) {
 
   room.timeLeft = room.maxTime;
   room.randomWord = randomWords(1)[0];
-  room.correctGuessers = []; // correct guessers reset for each new turn
+
+  setTimeout(() => {
+    rooms[roomCode].correctGuessers = []; // correct guessers reset for each new turn
+    io.to(roomCode).emit("roomDataUpdated", roomCode, room);
+  }, 2000);
 
   io.to(roomCode).emit("roomDataUpdated", roomCode, room);
 }
