@@ -240,7 +240,7 @@ module.exports = function (io) {
         drawer.score = (drawer.score || 0) + drawerPoints;
 
         room.correctGuessers.push(user);
-
+        
         // Send success message
         const correctGuessMsg = `${userName} guessed the word!`;
 
