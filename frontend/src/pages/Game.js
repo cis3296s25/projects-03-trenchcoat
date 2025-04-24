@@ -3,17 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import DrawingCanvas from "../components/DrawingCanvas";
 import ChatBox from "../components/ChatBox";
 
-const formatWordDisplay = (word, isDrawer) => {
-  if (!word) return { display: '', count: 0 };
-  
-  return {
-    display: isDrawer ? 
-      word : 
-      word.split('').map(char => char === ' ' ? '  ' : '_').join(''),
-    count: word.replace(/\s/g, '').length
-  };
-};
-
 function Game({ appState, setAppState }) {
   const navigate = useNavigate();
   const { roomCode } = useParams();
@@ -52,10 +41,29 @@ function Game({ appState, setAppState }) {
     return currentDrawer?.socketId === socket.id || currentDrawer?.id === socket.id;
   }, [appState.roomData, socket]);
 
+  // Update this to use either randomWord (for drawer) or maskedWord (for guessers)
   useEffect(() => {
-    const formatted = formatWordDisplay(appState?.roomData?.randomWord, isCurrentUserDrawer);
-    setDisplayWord(formatted.display);
-  }, [appState?.roomData?.randomWord, isCurrentUserDrawer]);
+    if (isCurrentUserDrawer) {
+      setDisplayWord(appState?.roomData?.randomWord || '');
+    } else {
+      setDisplayWord(appState?.roomData?.maskedWord || '');
+    }
+  }, [
+    appState?.roomData?.randomWord,
+    appState?.roomData?.maskedWord,
+    isCurrentUserDrawer
+  ]);
+
+  // Get word length for hint (this should work for both drawer and guessers)
+  const wordLength = useMemo(() => {
+    if (isCurrentUserDrawer && appState?.roomData?.randomWord) {
+      return appState.roomData.randomWord.replace(/\s/g, '').length;
+    } else if (!isCurrentUserDrawer && appState?.roomData?.maskedWord) {
+      // Count the non-space characters in the masked word
+      return appState.roomData.maskedWord.replace(/\s/g, '').length;
+    }
+    return 0;
+  }, [appState?.roomData?.randomWord, appState?.roomData?.maskedWord, isCurrentUserDrawer]);
 
   return (
     <div style={{ paddingRight: "320px" }}>
@@ -65,7 +73,7 @@ function Game({ appState, setAppState }) {
         ) : (
           <p>Connecting to server...</p>
         )}
-        <div style={{ 
+        <div style={{
           margin: "20px 0",
           padding: "15px",
           textAlign: "center"
@@ -80,12 +88,12 @@ function Game({ appState, setAppState }) {
             {displayWord}
           </h1>
           {!isCurrentUserDrawer && (
-            <p style={{ 
+            <p style={{
               fontSize: "1rem",
               color: "#7f8c8d",
               margin: 0
             }}>
-              {appState?.roomData?.randomWord?.replace(/\s/g, '').length || 0} letters
+              {wordLength} letters
             </p>
           )}
         </div>

@@ -4,6 +4,12 @@ const randomWords = require("word-pictionary-list");
 
 const rooms = {};
 
+// Helper function to create a masked word for guessers
+const createMaskedWord = (word) => {
+  if (!word) return '';
+  return word.split('').map(char => char === ' ' ? ' ' : '_').join('');
+};
+
 function createGameRoom(userName, socketId) {
   const roomCode = generateRandomCode(5);
 
@@ -13,7 +19,7 @@ function createGameRoom(userName, socketId) {
   };
 
   rooms[roomCode] = createRoom(roomCode, user);
-  //correct guessers for round
+  // Correct guessers for round
   rooms[roomCode].correctGuessers = [];
 
   return {
@@ -120,6 +126,8 @@ function handleTurnEnd(io, roomCode, clearInterval) {
     console.log({ isLastRound, currentDrawerIsLast });
 
     clearInterval();
+
+    // Send the same reset data to all users
     return io.to(roomCode).emit("roomDataUpdated", roomCode, room);
   }
 
@@ -136,11 +144,44 @@ function handleTurnEnd(io, roomCode, clearInterval) {
   room.randomWord = randomWords(1)[0];
 
   setTimeout(() => {
-    rooms[roomCode].correctGuessers = []; // correct guessers reset for each new turn
-    io.to(roomCode).emit("roomDataUpdated", roomCode, room);
+    rooms[roomCode].correctGuessers = []; // Correct guessers reset for each new turn
+
+    // Send personalized data to each user
+    room.users.forEach(user => {
+      const isDrawer = room.users[room.currentDrawerIndex].id === user.id ||
+        room.users[room.currentDrawerIndex].socketId === user.id;
+
+      // Create a custom room data object for each user
+      const userRoomData = { ...room };
+
+      // For non-drawers, mask the word
+      if (!isDrawer) {
+        userRoomData.maskedWord = createMaskedWord(room.randomWord);
+        userRoomData.randomWord = null; // Don't send the actual word
+      }
+
+      // Send the personalized room data to this specific user
+      io.to(user.socketId || user.id).emit("roomDataUpdated", roomCode, userRoomData);
+    });
   }, 2000);
 
-  io.to(roomCode).emit("roomDataUpdated", roomCode, room);
+  // Initially send personalized data to each user
+  room.users.forEach(user => {
+    const isDrawer = room.users[room.currentDrawerIndex].id === user.id ||
+      room.users[room.currentDrawerIndex].socketId === user.id;
+
+    // Create a custom room data object for each user
+    const userRoomData = { ...room };
+
+    // For non-drawers, mask the word
+    if (!isDrawer) {
+      userRoomData.maskedWord = createMaskedWord(room.randomWord);
+      userRoomData.randomWord = null; // Don't send the actual word
+    }
+
+    // Send the personalized room data to this specific user
+    io.to(user.socketId || user.id).emit("roomDataUpdated", roomCode, userRoomData);
+  });
 }
 
 function clearRoomChat(roomCode) {
@@ -161,4 +202,5 @@ module.exports = {
   sendChatMessage,
   clearRoomChat,
   handleTurnEnd,
+  createMaskedWord,
 };
