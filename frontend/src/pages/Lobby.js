@@ -100,27 +100,33 @@ const Lobby = ({ appState, setAppState }) => {
         </div>
         <h2>Code {roomCode} </h2>
         <ul>
-          {roomData?.users?.map((user, index) => (
-            <li key={index}>
-              {userIsHost && user.socketId !== roomData.host.id && (
-                <button
-                  onClick={() => handleKickPlayer(user)}
-                  style={{
-                    backgroundColor: "#D3D3D3",
-                    marginRight: "8px",
-                    color: "black",
-                    border: "none",
-                    borderRadius: "12px",
-                    cursor: "pointer",
-                  }}
-                  title={`Kick ${user.userName}`}
-                >
-                  kick
-                </button>
-              )}
-              <span>{user.userName} </span>
-            </li>
-          ))}
+          {roomData?.users
+            ?.sort((a, b) => {
+              return a?.score < b?.score ? 1 : -1;
+            })
+            .map((user, index) => (
+              <li key={index}>
+                {userIsHost && user.socketId !== roomData.host.id && (
+                  <button
+                    onClick={() => handleKickPlayer(user)}
+                    style={{
+                      backgroundColor: "#D3D3D3",
+                      marginRight: "8px",
+                      color: "black",
+                      border: "none",
+                      borderRadius: "12px",
+                      cursor: "pointer",
+                    }}
+                    title={`Kick ${user.userName}`}
+                  >
+                    kick
+                  </button>
+                )}
+                <span>
+                  {`${user.userName}${user.score ? ` - ${user.score}` : ""}`}
+                </span>
+              </li>
+            ))}
         </ul>
 
         <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>

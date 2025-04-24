@@ -16,7 +16,6 @@ function Game({ appState, setAppState }) {
   };
 
   React.useEffect(() => {
-    console.log(appState);
     if (!appState?.roomData) {
       navigate(`/join/${roomCode}`);
     } else if (appState?.roomData && appState.roomData.gameStarted === false) {
