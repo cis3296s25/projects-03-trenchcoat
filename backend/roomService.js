@@ -93,7 +93,6 @@ function sendChatMessage(roomCode, user, message) {
     return room;
   }
 
-  addChatMessage(rooms[roomCode], user, message);
   return rooms[roomCode];
 }
 
@@ -103,6 +102,8 @@ function handleTurnEnd(io, roomCode, clearInterval) {
   if (!room) {
     return null;
   }
+  io.to(roomCode).emit("clearCanvas");
+  room.strokes = [];
 
   const isLastRound = room.round === room.maxRounds;
 
