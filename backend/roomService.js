@@ -104,85 +104,68 @@ function sendChatMessage(roomCode, user, message) {
 
 function handleTurnEnd(io, roomCode, clearInterval) {
   const room = rooms[roomCode];
+  if (!room) return null;
 
-  if (!room) {
-    return null;
-  }
-  io.to(roomCode).emit("clearCanvas");
-  room.strokes = [];
+  // Calculate scores earned this turn
+  const turnScores = room.users.map(user => ({
+    userName: user.userName,
+    pointsGained: user.pointsGainedThisTurn || 0,
+  }));
+  // Sort descending here
+  turnScores.sort((a, b) => b.pointsGained - a.pointsGained);
 
-  const isLastRound = room.round === room.maxRounds;
+  io.to(roomCode).emit("showLeaderboard", {
+    scores: turnScores,
+    correctWord: room.randomWord,
+  });
 
-  // Check if current drawer is last user in the list
-  const currentDrawerIsLast = room.currentDrawerIndex === room.users.length - 1;
-
-  if (isLastRound && currentDrawerIsLast) {
-    // Game over, reset room data
-    room.gameStarted = false;
-    room.round = 1;
-    room.timeLeft = room.maxTime;
-    room.currentDrawerIndex = 0;
-
-    console.log({ isLastRound, currentDrawerIsLast });
-
-    clearInterval();
-
-    // Send the same reset data to all users
-    return io.to(roomCode).emit("roomDataUpdated", roomCode, room);
-  }
-
-  // If last user, reset to first user and increment round
-  if (currentDrawerIsLast) {
-    room.currentDrawerIndex = 0;
-    room.round += 1;
-  } else {
-    // Move to next user
-    room.currentDrawerIndex += 1;
-  }
-
-  room.timeLeft = room.maxTime;
-  room.randomWord = randomWords(1)[0];
-
+  // Delay the rest of the logic by 3 seconds
   setTimeout(() => {
-    rooms[roomCode].correctGuessers = []; // Correct guessers reset for each new turn
+    // Reset pointsGainedThisTurn for next round
+    room.users.forEach(user => user.pointsGainedThisTurn = 0);
 
-    // Send personalized data to each user
+    io.to(roomCode).emit("clearCanvas");
+    room.strokes = [];
+
+    const isLastRound = room.round === room.maxRounds;
+    const currentDrawerIsLast = room.currentDrawerIndex === room.users.length - 1;
+
+    if (isLastRound && currentDrawerIsLast) {
+      room.gameStarted = false;
+      room.round = 1;
+      room.timeLeft = room.maxTime;
+      room.currentDrawerIndex = 0;
+      clearInterval();
+      return io.to(roomCode).emit("roomDataUpdated", roomCode, room);
+    }
+
+    if (currentDrawerIsLast) {
+      room.currentDrawerIndex = 0;
+      room.round += 1;
+    } else {
+      room.currentDrawerIndex += 1;
+    }
+
+    room.timeLeft = room.maxTime;
+    room.randomWord = randomWords(1)[0];
+    rooms[roomCode].correctGuessers = [];
+
+    // Personalized room data sending (existing logic)
     room.users.forEach(user => {
       const isDrawer = room.users[room.currentDrawerIndex].id === user.id ||
         room.users[room.currentDrawerIndex].socketId === user.id;
-
-      // Create a custom room data object for each user
       const userRoomData = { ...room };
-
-      // For non-drawers, mask the word
+      //Mask the word for guessers
       if (!isDrawer) {
         userRoomData.maskedWord = createMaskedWord(room.randomWord);
-        userRoomData.randomWord = null; // Don't send the actual word
+        userRoomData.randomWord = null;
       }
-
-      // Send the personalized room data to this specific user
+      // Send the updated room data to the user
       io.to(user.socketId || user.id).emit("roomDataUpdated", roomCode, userRoomData);
     });
-  }, 2000);
-
-  // Initially send personalized data to each user
-  room.users.forEach(user => {
-    const isDrawer = room.users[room.currentDrawerIndex].id === user.id ||
-      room.users[room.currentDrawerIndex].socketId === user.id;
-
-    // Create a custom room data object for each user
-    const userRoomData = { ...room };
-
-    // For non-drawers, mask the word
-    if (!isDrawer) {
-      userRoomData.maskedWord = createMaskedWord(room.randomWord);
-      userRoomData.randomWord = null; // Don't send the actual word
-    }
-
-    // Send the personalized room data to this specific user
-    io.to(user.socketId || user.id).emit("roomDataUpdated", roomCode, userRoomData);
-  });
+  }, 3000);
 }
+
 
 function clearRoomChat(roomCode) {
   if (!rooms[roomCode]) {
