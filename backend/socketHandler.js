@@ -324,8 +324,9 @@ module.exports = function (io) {
         const drawer = room.users[room.currentDrawerIndex];
 
         // Award points to guesser based on time
-        const guesserPoints = Math.ceil(room.timeLeft * 3);
+        const guesserPoints = Math.ceil(room.timeLeft * 4);
         user.score = (user.score || 0) + guesserPoints;
+        user.pointsGainedThisTurn = (user.pointsGainedThisTurn || 0) + guesserPoints;
 
         // Award points to drawer
         let drawerPoints = 0;
@@ -335,6 +336,7 @@ module.exports = function (io) {
           drawerPoints = 50; // each additional
         }
         drawer.score = (drawer.score || 0) + drawerPoints;
+        drawer.pointsGainedThisTurn = (drawer.pointsGainedThisTurn || 0) + drawerPoints;
 
         room.correctGuessers.push(user);
 

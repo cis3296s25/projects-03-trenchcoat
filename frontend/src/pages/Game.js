@@ -7,7 +7,13 @@ function Game({ appState, setAppState }) {
   const navigate = useNavigate();
   const { roomCode } = useParams();
   const audioRef = React.useRef(null);
+  const turnEndAudioRef = React.useRef(null);
   const [displayWord, setDisplayWord] = useState('');
+  const [leaderboardVisible, setLeaderboardVisible] = useState(false);
+  const [turnScores, setTurnScores] = useState([]);
+  const [correctWord, setCorrectWord] = useState('');
+
+
 
   const handleGoBack = () => {
     if (appState.socket && appState?.roomData?.code) {
@@ -65,6 +71,30 @@ function Game({ appState, setAppState }) {
     return 0;
   }, [appState?.roomData?.randomWord, appState?.roomData?.maskedWord, isCurrentUserDrawer]);
 
+  useEffect(() => {
+    if (!socket) return;
+  
+    socket.on("showLeaderboard", ({ scores, correctWord }) => {
+      const sortedScores = scores.sort((a, b) => b.pointsGained - a.pointsGained);
+      setTurnScores(sortedScores);
+      setCorrectWord(correctWord);
+      setLeaderboardVisible(true);
+      // Play sound
+      if (turnEndAudioRef.current) {
+        turnEndAudioRef.current.currentTime = 0; // Rewind to start
+        turnEndAudioRef.current.volume = 0.5;
+        turnEndAudioRef.current.play();
+      }
+      setTimeout(() => {
+        setLeaderboardVisible(false);
+      }, 3000);
+    });
+  
+    return () => {
+      socket.off("showLeaderboard");
+    };
+  }, [socket]);  
+
   return (
     <div style={{ paddingRight: "320px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
@@ -115,7 +145,29 @@ function Game({ appState, setAppState }) {
             </li>
           ))}
         </ul>
-
+        {leaderboardVisible && (
+          <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.7)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000,
+          color: "white",
+        }}>
+          <h2 style={{ fontSize: "3rem", marginBottom: "1rem" }}>Turn Leaderboard</h2>
+          <p style={{ fontSize: "2rem", marginBottom: "1rem" }}>
+            The word was: <strong>{correctWord}</strong>
+          </p>
+          <ul style={{ fontSize: "1.8rem", listStyle: "none", padding: 0 }}>
+            {turnScores.map((player, idx) => (
+              <li key={idx}>{player.userName}: +{player.pointsGained} pts</li>
+            ))}
+          </ul>
+        </div>
+      )}
         <button
           style={{
             backgroundColor: "#f44336",
@@ -135,6 +187,10 @@ function Game({ appState, setAppState }) {
       <audio ref={audioRef} autoPlay loop>
         <source src="/bg-music.mp3" type="audio/mpeg" />
       </audio>
+      <audio ref={turnEndAudioRef}>
+        <source src="/buzzer.mp3" type="audio/mpeg" />
+      </audio>
+
     </div>
   );
 }
